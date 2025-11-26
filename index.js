@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -15,38 +15,44 @@ const shopItems = {
     '500_token': {
         name: '500 Token',
         price: 50,
-        description: 'Get 500 Tokens for your DrkSurvraze Minecraft account',
-        bKash: '01XXXXXXXXX'
+        description: 'Small bag of Token.',
+        bKash: '01777194638',
+        nagad: '01777194638'
     },
     '1000_token': {
         name: '1000 Token',
         price: 100,
-        description: 'Get 1000 Tokens for your DrkSurvraze Minecraft account',
-        bKash: '01XXXXXXXXX'
+        description: 'Medium bag of Token.',
+        bKash: '01777194638',
+        nagad: '01777194638'
     },
     '2500_token': {
         name: '2500 Token',
         price: 250,
-        description: 'Get 2500 Tokens for your DrkSurvraze Minecraft account',
-        bKash: '01XXXXXXXXX'
+        description: 'Large bag of Token.',
+        bKash: '01777194638',
+        nagad: '01777194638'
     },
     '5000_token': {
         name: '5000 Token',
         price: 500,
-        description: 'Get 5000 Tokens for your DrkSurvraze Minecraft account',
-        bKash: '01XXXXXXXXX'
+        description: 'Extra large bag of Token.',
+        bKash: '01777194638',
+        nagad: '01777194638'
     },
     '10000_token': {
         name: '10000 Token',
         price: 1000,
-        description: 'Get 10000 Tokens for your DrkSurvraze Minecraft account',
-        bKash: '01XXXXXXXXX'
+        description: 'Giant bag of Token.',
+        bKash: '01777194638',
+        nagad: '01777194638'
     },
     'vip_rank': {
         name: 'VIP RANK',
         price: 150,
         description: 'Get VIP Rank in DrkSurvraze Minecraft Server',
-        bKash: '01XXXXXXXXX'
+        bKash: '01777194638',
+        nagad: '01777194638'
     }
 };
 
@@ -59,7 +65,7 @@ client.on('messageCreate', async (message) => {
     if (message.content === '!shop' && message.author.bot === false) {
         const embed = new EmbedBuilder()
             .setTitle('🛒 Welcome to DrkSurvraze Shop!')
-            .setDescription('**Purchasing Process:**\n1. Select an item from dropdown\n2. Send money to our bKash\n3. Click Purchase & fill details\n4. Wait for confirmation DM')
+            .setDescription('**Purchasing Process:**\n1. Select an item from dropdown\n2. Send money to our bKash/Nagad\n3. Click Purchase & fill details\n4. Wait for confirmation DM')
             .setColor(0x00FF00)
             .addFields(
                 { name: '500 Token', value: 'Price: 50 BDT', inline: true },
@@ -72,7 +78,7 @@ client.on('messageCreate', async (message) => {
             .setFooter({ text: 'DrkSurvraze Minecraft Community' });
 
         const selectMenu = new StringSelectMenuBuilder()
-            .setCustomId('drksurvraze_shop_select')
+            .setCustomId('item_select')
             .setPlaceholder('Select an item to purchase...')
             .addOptions([
                 { label: '500 Token', description: '50 BDT', value: '500_token' },
@@ -92,13 +98,17 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// Handle Item Selection
+// Handle Item Selection - Step 1
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isStringSelectMenu()) return;
 
-    if (interaction.customId === 'drksurvraze_shop_select') {
+    if (interaction.customId === 'item_select') {
         const selectedItem = interaction.values[0];
         const item = shopItems[selectedItem];
+
+        // Store selected item in interaction for later use
+        interaction.selectedItem = item;
+        interaction.selectedItemId = selectedItem;
 
         const embed = new EmbedBuilder()
             .setTitle(`🛒 ${item.name} - DrkSurvraze Shop`)
@@ -106,33 +116,72 @@ client.on('interactionCreate', async (interaction) => {
             .addFields(
                 { name: '📦 Item', value: item.name, inline: true },
                 { name: '💰 Price', value: `${item.price} BDT`, inline: true },
-                { name: '📱 bKash Number', value: item.bKash, inline: false },
                 { name: '📝 Description', value: item.description, inline: false }
             )
-            .setFooter({ text: 'Click the button below to complete purchase' });
+            .setFooter({ text: 'Select your payment method below' });
 
-        const purchaseButton = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`purchase_${selectedItem}`)
-                .setLabel('Purchase Now')
-                .setStyle(ButtonStyle.Success)
-        );
+        // Payment Method Selection
+        const paymentSelect = new StringSelectMenuBuilder()
+            .setCustomId('payment_select')
+            .setPlaceholder('Choose payment method...')
+            .addOptions([
+                { label: 'bKash', description: 'Pay with bKash', value: 'bkash' },
+                { label: 'Nagad', description: 'Pay with Nagad', value: 'nagad' }
+            ]);
+
+        const row = new ActionRowBuilder().addComponents(paymentSelect);
 
         await interaction.reply({
             embeds: [embed],
-            components: [purchaseButton],
+            components: [row],
             ephemeral: true
         });
     }
 
-    // Handle Purchase Button Click
+    // Handle Payment Method Selection - Step 2
+    if (interaction.customId === 'payment_select') {
+        const paymentMethod = interaction.values[0];
+        const item = interaction.selectedItem;
+        const itemId = interaction.selectedItemId;
+
+        const paymentNumber = paymentMethod === 'bkash' ? item.bKash : item.nagad;
+        const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
+
+        const embed = new EmbedBuilder()
+            .setTitle(`💰 ${item.name} - Payment Instructions`)
+            .setColor(0x0099FF)
+            .addFields(
+                { name: '📦 Item', value: item.name, inline: true },
+                { name: '💰 Price', value: `${item.price} BDT`, inline: true },
+                { name: `📱 ${paymentName} Number`, value: paymentNumber, inline: false },
+                { name: '📝 Description', value: item.description, inline: false }
+            )
+            .setDescription(`**How to Purchase:**\n1. Send ${item.price} BDT to ${paymentName} number: ${paymentNumber}\n2. Click the 'Purchase' button below.\n3. Enter your Minecraft name and the ${paymentName} Transaction ID.`)
+            .setFooter({ text: 'Make sure to use the Send Money option' });
+
+        const purchaseButton = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`purchase_${itemId}_${paymentMethod}`)
+                .setLabel('Purchase Now')
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('🛒')
+        );
+
+        await interaction.update({
+            embeds: [embed],
+            components: [purchaseButton]
+        });
+    }
+
+    // Handle Purchase Button Click - Step 3
     if (interaction.isButton() && interaction.customId.startsWith('purchase_')) {
-        const itemId = interaction.customId.replace('purchase_', '');
+        const [_, itemId, paymentMethod] = interaction.customId.split('_');
         const item = shopItems[itemId];
+        const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
 
         // Create Purchase Form Modal
         const modal = new ModalBuilder()
-            .setCustomId(`purchase_modal_${itemId}`)
+            .setCustomId(`purchase_modal_${itemId}_${paymentMethod}`)
             .setTitle(`Purchase ${item.name}`);
 
         // Minecraft Username Input
@@ -140,13 +189,15 @@ client.on('interactionCreate', async (interaction) => {
             .setCustomId('minecraft_username')
             .setLabel('Your Minecraft Username')
             .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Enter your exact Minecraft username')
             .setRequired(true);
 
-        // bKash Transaction ID Input
+        // Transaction ID Input
         const transactionInput = new TextInputBuilder()
-            .setCustomId('bkash_transaction')
-            .setLabel('bKash Transaction ID')
+            .setCustomId('transaction_id')
+            .setLabel(`${paymentName} Transaction ID`)
             .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Enter your transaction ID')
             .setRequired(true);
 
         // Phone Number Input
@@ -154,6 +205,7 @@ client.on('interactionCreate', async (interaction) => {
             .setCustomId('phone_number')
             .setLabel('Your Phone Number')
             .setStyle(TextInputStyle.Short)
+            .setPlaceholder('01XXXXXXXXX')
             .setRequired(true);
 
         const firstActionRow = new ActionRowBuilder().addComponents(minecraftInput);
@@ -166,16 +218,17 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// Handle Modal Submission
+// Handle Modal Submission - Final Step
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isModalSubmit()) return;
 
     if (interaction.customId.startsWith('purchase_modal_')) {
-        const itemId = interaction.customId.replace('purchase_modal_', '');
+        const [_, __, itemId, paymentMethod] = interaction.customId.split('_');
         const item = shopItems[itemId];
+        const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
 
         const minecraftUsername = interaction.fields.getTextInputValue('minecraft_username');
-        const transactionId = interaction.fields.getTextInputValue('bkash_transaction');
+        const transactionId = interaction.fields.getTextInputValue('transaction_id');
         const phoneNumber = interaction.fields.getTextInputValue('phone_number');
 
         // Send confirmation to user
@@ -185,6 +238,7 @@ client.on('interactionCreate', async (interaction) => {
             .addFields(
                 { name: 'Item', value: item.name, inline: true },
                 { name: 'Price', value: `${item.price} BDT`, inline: true },
+                { name: 'Payment Method', value: paymentName, inline: true },
                 { name: 'Minecraft Username', value: minecraftUsername, inline: false },
                 { name: 'Transaction ID', value: transactionId, inline: true },
                 { name: 'Phone Number', value: phoneNumber, inline: true }
@@ -197,7 +251,7 @@ client.on('interactionCreate', async (interaction) => {
             ephemeral: true
         });
 
-        // Send notification to admin channel (optional)
+        // Send notification to admin channel
         const adminChannel = client.channels.cache.get('ADMIN_CHANNEL_ID');
         if (adminChannel) {
             const adminEmbed = new EmbedBuilder()
@@ -207,6 +261,7 @@ client.on('interactionCreate', async (interaction) => {
                     { name: 'User', value: interaction.user.tag, inline: true },
                     { name: 'Item', value: item.name, inline: true },
                     { name: 'Price', value: `${item.price} BDT`, inline: true },
+                    { name: 'Payment Method', value: paymentName, inline: true },
                     { name: 'Minecraft Username', value: minecraftUsername, inline: false },
                     { name: 'Transaction ID', value: transactionId, inline: true },
                     { name: 'Phone Number', value: phoneNumber, inline: true }
@@ -218,5 +273,4 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// Bot Login
 client.login(process.env.DISCORD_TOKEN);
