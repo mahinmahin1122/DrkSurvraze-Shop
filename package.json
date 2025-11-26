@@ -1,16 +1,13 @@
 {
-  "name": "bmc-shop-bot",
+  "name": "drksurvraze-shop-bot",
   "version": "1.0.0",
-  "description": "BMC Shop Bot for Minecraft Community",
-  "main": "bot.js",
+  "description": "DrkSurvraze Minecraft Shop Bot",
+  "main": "index.js",
   "scripts": {
-    "start": "node bot.js"
+    "start": "node index.js"
   },
   "dependencies": {
     "discord.js": "^14.14.1",
     "dotenv": "^16.3.1"
-  },
-  "engines": {
-    "node": "18.x"
   }
 }
