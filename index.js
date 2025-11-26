@@ -73,7 +73,7 @@ client.on('messageCreate', async (message) => {
             .setTitle('🛒 Welcome to DrkSurvraze Shop!')
             .setDescription('**Purchasing Process:**\n1. Select an item from dropdown\n2. Send money to our bKash/Nagad\n3. Click Purchase & fill details\n4. Wait for confirmation DM')
             .setColor(0x00FF00)
-            .setThumbnail('https://i.imgur.com/your-shop-logo.png') // আপনার শপ লোগো
+            .setThumbnail('https://ibb.co.com/q6GT6k7') // আপনার শপ লোগো
             
             .setImage('https://i.imgur.com/your-banner-image.png') // ব্যানার ইমেজ
             .setFooter({ text: 'DrkSurvraze Minecraft Community', iconURL: 'https://i.imgur.com/your-icon.png' });
