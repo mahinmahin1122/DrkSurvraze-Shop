@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -17,42 +17,48 @@ const shopItems = {
         price: 50,
         description: 'Small bag of Token.',
         bKash: '01777194638',
-        nagad: '01777194638'
+        nagad: '01777194638',
+        image: 'https://i.imgur.com/example1.png' // আপনার ইমেজ URL
     },
     '1000_token': {
         name: '1000 Token',
         price: 100,
         description: 'Medium bag of Token.',
         bKash: '01777194638',
-        nagad: '01777194638'
+        nagad: '01777194638',
+        image: 'https://i.imgur.com/example2.png' // আপনার ইমেজ URL
     },
     '2500_token': {
         name: '2500 Token',
         price: 250,
         description: 'Large bag of Token.',
         bKash: '01777194638',
-        nagad: '01777194638'
+        nagad: '01777194638',
+        image: 'https://i.imgur.com/example3.png' // আপনার ইমেজ URL
     },
     '5000_token': {
         name: '5000 Token',
         price: 500,
         description: 'Extra large bag of Token.',
         bKash: '01777194638',
-        nagad: '01777194638'
+        nagad: '01777194638',
+        image: 'https://i.imgur.com/example4.png' // আপনার ইমেজ URL
     },
     '10000_token': {
         name: '10000 Token',
         price: 1000,
         description: 'Giant bag of Token.',
         bKash: '01777194638',
-        nagad: '01777194638'
+        nagad: '01777194638',
+        image: 'https://i.imgur.com/example5.png' // আপনার ইমেজ URL
     },
     'vip_rank': {
         name: 'VIP RANK',
         price: 150,
         description: 'Get VIP Rank in DrkSurvraze Minecraft Server',
         bKash: '01777194638',
-        nagad: '01777194638'
+        nagad: '01777194638',
+        image: 'https://i.imgur.com/example6.png' // আপনার ইমেজ URL
     }
 };
 
@@ -67,6 +73,7 @@ client.on('messageCreate', async (message) => {
             .setTitle('🛒 Welcome to DrkSurvraze Shop!')
             .setDescription('**Purchasing Process:**\n1. Select an item from dropdown\n2. Send money to our bKash/Nagad\n3. Click Purchase & fill details\n4. Wait for confirmation DM')
             .setColor(0x00FF00)
+            .setThumbnail('https://i.imgur.com/your-shop-logo.png') // আপনার শপ লোগো
             .addFields(
                 { name: '500 Token', value: 'Price: 50 BDT', inline: true },
                 { name: '1000 Token', value: 'Price: 100 BDT', inline: true },
@@ -75,7 +82,8 @@ client.on('messageCreate', async (message) => {
                 { name: '10000 Token', value: 'Price: 1000 BDT', inline: true },
                 { name: 'VIP RANK', value: 'Price: 150 BDT', inline: true }
             )
-            .setFooter({ text: 'DrkSurvraze Minecraft Community' });
+            .setImage('https://i.imgur.com/your-banner-image.png') // ব্যানার ইমেজ
+            .setFooter({ text: 'DrkSurvraze Minecraft Community', iconURL: 'https://i.imgur.com/your-icon.png' });
 
         const selectMenu = new StringSelectMenuBuilder()
             .setCustomId('item_select')
@@ -113,6 +121,7 @@ client.on('interactionCreate', async (interaction) => {
         const embed = new EmbedBuilder()
             .setTitle(`🛒 ${item.name} - DrkSurvraze Shop`)
             .setColor(0xFFA500)
+            .setThumbnail(item.image) // আইটেমের ছবি
             .addFields(
                 { name: '📦 Item', value: item.name, inline: true },
                 { name: '💰 Price', value: `${item.price} BDT`, inline: true },
@@ -125,8 +134,8 @@ client.on('interactionCreate', async (interaction) => {
             .setCustomId('payment_select')
             .setPlaceholder('Choose payment method...')
             .addOptions([
-                { label: 'bKash', description: 'Pay with bKash', value: 'bkash' },
-                { label: 'Nagad', description: 'Pay with Nagad', value: 'nagad' }
+                { label: 'bKash', description: 'Pay with bKash', value: 'bkash', emoji: '💳' },
+                { label: 'Nagad', description: 'Pay with Nagad', value: 'nagad', emoji: '📱' }
             ]);
 
         const row = new ActionRowBuilder().addComponents(paymentSelect);
@@ -146,17 +155,20 @@ client.on('interactionCreate', async (interaction) => {
 
         const paymentNumber = paymentMethod === 'bkash' ? item.bKash : item.nagad;
         const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
+        const paymentEmoji = paymentMethod === 'bkash' ? '💳' : '📱';
 
         const embed = new EmbedBuilder()
-            .setTitle(`💰 ${item.name} - Payment Instructions`)
+            .setTitle(`${paymentEmoji} ${item.name} - Payment Instructions`)
             .setColor(0x0099FF)
+            .setThumbnail(item.image) // আইটেমের ছবি
             .addFields(
                 { name: '📦 Item', value: item.name, inline: true },
                 { name: '💰 Price', value: `${item.price} BDT`, inline: true },
-                { name: `📱 ${paymentName} Number`, value: paymentNumber, inline: false },
+                { name: `📱 ${paymentName} Number`, value: `\`${paymentNumber}\``, inline: false },
                 { name: '📝 Description', value: item.description, inline: false }
             )
             .setDescription(`**How to Purchase:**\n1. Send ${item.price} BDT to ${paymentName} number: ${paymentNumber}\n2. Click the 'Purchase' button below.\n3. Enter your Minecraft name and the ${paymentName} Transaction ID.`)
+            .setImage('https://i.imgur.com/your-payment-guide.png') // পেমেন্ট গাইড ইমেজ
             .setFooter({ text: 'Make sure to use the Send Money option' });
 
         const purchaseButton = new ActionRowBuilder().addComponents(
@@ -235,6 +247,7 @@ client.on('interactionCreate', async (interaction) => {
         const userEmbed = new EmbedBuilder()
             .setTitle('✅ Purchase Submitted - DrkSurvraze')
             .setColor(0x00FF00)
+            .setThumbnail('https://i.imgur.com/success-icon.png') // সাকসেস আইকন
             .addFields(
                 { name: 'Item', value: item.name, inline: true },
                 { name: 'Price', value: `${item.price} BDT`, inline: true },
@@ -244,7 +257,7 @@ client.on('interactionCreate', async (interaction) => {
                 { name: 'Phone Number', value: phoneNumber, inline: true }
             )
             .setDescription('We will verify your payment and deliver your item within 1-2 hours. Thank you for shopping with DrkSurvraze!')
-            .setFooter({ text: 'DrkSurvraze Minecraft Community' });
+            .setFooter({ text: 'DrkSurvraze Minecraft Community', iconURL: 'https://i.imgur.com/your-icon.png' });
 
         await interaction.reply({
             embeds: [userEmbed],
