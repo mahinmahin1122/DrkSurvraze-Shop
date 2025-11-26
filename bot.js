@@ -1,11 +1,12 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, Events } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.MessageComponents
     ]
 });
 
@@ -21,83 +22,92 @@ const shopItems = {
 
 client.once('ready', () => {
     console.log(`✅ ${client.user.tag} বট চালু হয়েছে!`);
-    
-    // Slash command রেজিস্টার করি
-    const commands = [{
-        name: 'shop',
-        description: 'সার্ভার দোকান খুলুন'
-    }];
-
-    client.application.commands.set(commands);
-    console.log('🛒 Shop command রেজিস্টার্ড হয়েছে');
+    console.log('🛒 //shop কমান্ড ব্যবহার করুন!');
 });
 
-// Slash command হ্যান্ডলার
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
+// মেসেজ তৈরি ফাংশন
+async function createShopMessage(interaction) {
+    const embed = new EmbedBuilder()
+        .setTitle("🏪 BMC সার্ভার শপ")
+        .setDescription("সার্ভার দোকানে স্বাগতম! নিচের ড্রপডাউন মেনু থেকে একটি আইটেম সিলেক্ট করুন এবং ক্রয় করুন।")
+        .setColor(0x7289da)
+        .addFields(
+            {
+                name: "ক্রয়ের পদ্ধতি:",
+                value: "১. ড্রপডাউন থেকে একটি আইটেম সিলেক্ট করুন\n২. আমাদের বিকাশ নম্বরে প্রয়োজনীয় পরিমাণ টাকা সেন্ড করুন\n৩. 'ক্রয় করুন' বাটনে ক্লিক করুন এবং আপনার তথ্য দিন\n৪. কনফার্মেশন DM এর জন্য অপেক্ষা করুন। আপনার আইটেম অটোমেটিক ডেলিভারি হবে",
+                inline: false
+            }
+        )
+        .setFooter({ text: "বাংলা মাইনক্রাফট কমিউনিটি" });
 
-    if (interaction.commandName === 'shop') {
-        const embed = new EmbedBuilder()
-            .setTitle("🏪 BMC সার্ভার শপ")
-            .setDescription("সার্ভার দোকানে স্বাগতম! নিচের ড্রপডাউন মেনু থেকে একটি আইটেম সিলেক্ট করুন এবং ক্রয় করুন।")
-            .setColor(0x7289da)
-            .addFields(
-                {
-                    name: "ক্রয়ের পদ্ধতি:",
-                    value: "১. ড্রপডাউন থেকে একটি আইটেম সিলেক্ট করুন\n২. আমাদের বিকাশ নম্বরে প্রয়োজনীয় পরিমাণ টাকা সেন্ড করুন\n৩. 'ক্রয় করুন' বাটনে ক্লিক করুন এবং আপনার তথ্য দিন\n৪. কনফার্মেশন DM এর জন্য অপেক্ষা করুন। আপনার আইটেম অটোমেটিক ডেলিভারি হবে",
-                    inline: false
-                }
-            )
-            .setFooter({ text: "বাংলা মাইনক্রাফট কমিউনিটি" });
+    const selectMenu = new StringSelectMenuBuilder()
+        .setCustomId('item_select')
+        .setPlaceholder('একটি আইটেম সিলেক্ট করুন...')
+        .addOptions([
+            {
+                label: "500 Token",
+                description: "দাম: 50 টাকা",
+                value: "500 Token",
+                emoji: "🪙"
+            },
+            {
+                label: "1000 Token",
+                description: "দাম: 100 টাকা",
+                value: "1000 Token",
+                emoji: "🪙"
+            },
+            {
+                label: "2500 Token",
+                description: "দাম: 250 টাকা",
+                value: "2500 Token",
+                emoji: "🪙"
+            },
+            {
+                label: "5000 Token",
+                description: "দাম: 500 টাকা",
+                value: "5000 Token",
+                emoji: "🪙"
+            },
+            {
+                label: "10000 Token",
+                description: "দাম: 1000 টাকা",
+                value: "10000 Token",
+                emoji: "🪙"
+            },
+            {
+                label: "VIP RANK",
+                description: "দাম: 150 টাকা",
+                value: "VIP RANK",
+                emoji: "⭐"
+            }
+        ]);
 
-        const selectMenu = new StringSelectMenuBuilder()
-            .setCustomId('item_select')
-            .setPlaceholder('একটি আইটেম সিলেক্ট করুন...')
-            .addOptions([
-                {
-                    label: "500 Token",
-                    description: "দাম: 50 টাকা",
-                    value: "500 Token",
-                    emoji: "🪙"
-                },
-                {
-                    label: "1000 Token",
-                    description: "দাম: 100 টাকা",
-                    value: "1000 Token",
-                    emoji: "🪙"
-                },
-                {
-                    label: "2500 Token",
-                    description: "দাম: 250 টাকা",
-                    value: "2500 Token",
-                    emoji: "🪙"
-                },
-                {
-                    label: "5000 Token",
-                    description: "দাম: 500 টাকা",
-                    value: "5000 Token",
-                    emoji: "🪙"
-                },
-                {
-                    label: "10000 Token",
-                    description: "দাম: 1000 টাকা",
-                    value: "10000 Token",
-                    emoji: "🪙"
-                },
-                {
-                    label: "VIP RANK",
-                    description: "দাম: 150 টাকা",
-                    value: "VIP RANK",
-                    emoji: "⭐"
-                }
-            ]);
+    const row = new ActionRowBuilder().addComponents(selectMenu);
 
-        const row = new ActionRowBuilder().addComponents(selectMenu);
+    return {
+        embeds: [embed],
+        components: [row]
+    };
+}
 
-        await interaction.reply({
-            embeds: [embed],
-            components: [row]
-        });
+// //shop কমান্ড ডিটেক্ট করবে
+client.on('messageCreate', async (message) => {
+    // বটের নিজের মেসেজ ignore করবে
+    if (message.author.bot) return;
+
+    // //shop কমান্ড চেক করবে
+    if (message.content === '//shop') {
+        const shopMessage = await createShopMessage();
+        
+        // মেসেজ ডিলিট করবে (optional)
+        try {
+            await message.delete();
+        } catch (error) {
+            console.log('মেসেজ ডিলিট করতে পারিনি');
+        }
+
+        // দোকান মেসেজ সেন্ড করবে
+        await message.channel.send(shopMessage);
     }
 });
 
@@ -240,13 +250,13 @@ client.on('interactionCreate', async (interaction) => {
                 );
 
             const approveButton = new ButtonBuilder()
-                .setCustomId(`approve_${interaction.user.id}_${itemName}`)
+                .setCustomId(`approve_${interaction.user.id}_${itemName}_${minecraftUsername}`)
                 .setLabel("অনুমোদন")
                 .setStyle(ButtonStyle.Success)
                 .setEmoji("✅");
 
             const rejectButton = new ButtonBuilder()
-                .setCustomId(`reject_${interaction.user.id}_${itemName}`)
+                .setCustomId(`reject_${interaction.user.id}_${itemName}_${minecraftUsername}`)
                 .setLabel("রিজেক্ট")
                 .setStyle(ButtonStyle.Danger)
                 .setEmoji("❌");
@@ -266,7 +276,7 @@ client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
     if (interaction.customId.startsWith('approve_')) {
-        const [_, userId, itemName] = interaction.customId.split('_');
+        const [_, userId, itemName, minecraftUsername] = interaction.customId.split('_');
         const user = await client.users.fetch(userId);
 
         try {
@@ -274,17 +284,22 @@ client.on('interactionCreate', async (interaction) => {
                 .setTitle("ক্রয় ভেরিফাই হয়েছে! ✅")
                 .setDescription(`**${itemName}** এর আপনার ক্রয় ভেরিফাই এবং ডেলিভারি হয়েছে।`)
                 .setColor(0x00ff00)
+                .addFields(
+                    { name: "মাইনক্রাফট ইউজারনেম", value: minecraftUsername, inline: true }
+                )
                 .setFooter({ text: "ক্রয় করার জন্য ধন্যবাদ!" });
 
             await user.send({ embeds: [userEmbed] });
 
             // অ্যাডমিন মেসেজ আপডেট
-            const embed = interaction.message.embeds[0];
-            embed.data.fields[3].value = "✅ অনুমোদিত ও ডেলিভার্ড";
-            embed.data.color = 0x00ff00;
+            const originalEmbed = interaction.message.embeds[0];
+            const updatedEmbed = EmbedBuilder.from(originalEmbed)
+                .setColor(0x00ff00);
+            
+            updatedEmbed.data.fields[3].value = "✅ অনুমোদিত ও ডেলিভার্ড";
 
             await interaction.message.edit({
-                embeds: [embed],
+                embeds: [updatedEmbed],
                 components: []
             });
 
@@ -302,7 +317,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     if (interaction.customId.startsWith('reject_')) {
-        const [_, userId, itemName] = interaction.customId.split('_');
+        const [_, userId, itemName, minecraftUsername] = interaction.customId.split('_');
         const user = await client.users.fetch(userId);
 
         try {
@@ -319,12 +334,14 @@ client.on('interactionCreate', async (interaction) => {
             await user.send({ embeds: [userEmbed] });
 
             // অ্যাডমিন মেসেজ আপডেট
-            const embed = interaction.message.embeds[0];
-            embed.data.fields[3].value = "❌ রিজেক্টেড";
-            embed.data.color = 0xff0000;
+            const originalEmbed = interaction.message.embeds[0];
+            const updatedEmbed = EmbedBuilder.from(originalEmbed)
+                .setColor(0xff0000);
+            
+            updatedEmbed.data.fields[3].value = "❌ রিজেক্টেড";
 
             await interaction.message.edit({
-                embeds: [embed],
+                embeds: [updatedEmbed],
                 components: []
             });
 
