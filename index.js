@@ -74,14 +74,7 @@ client.on('messageCreate', async (message) => {
             .setDescription('**Purchasing Process:**\n1. Select an item from dropdown\n2. Send money to our bKash/Nagad\n3. Click Purchase & fill details\n4. Wait for confirmation DM')
             .setColor(0x00FF00)
             .setThumbnail('https://i.imgur.com/your-shop-logo.png') // আপনার শপ লোগো
-            .addFields(
-                { name: '500 Token', value: 'Price: 50 BDT', inline: true },
-                { name: '1000 Token', value: 'Price: 100 BDT', inline: true },
-                { name: '2500 Token', value: 'Price: 250 BDT', inline: true },
-                { name: '5000 Token', value: 'Price: 500 BDT', inline: true },
-                { name: '10000 Token', value: 'Price: 1000 BDT', inline: true },
-                { name: 'VIP RANK', value: 'Price: 150 BDT', inline: true }
-            )
+            
             .setImage('https://i.imgur.com/your-banner-image.png') // ব্যানার ইমেজ
             .setFooter({ text: 'DrkSurvraze Minecraft Community', iconURL: 'https://i.imgur.com/your-icon.png' });
 
