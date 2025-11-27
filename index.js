@@ -6,7 +6,9 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessageTyping,
+        GatewayIntentBits.DirectMessages
     ]
 });
 
@@ -94,16 +96,36 @@ const shopImages = {
     paymentGuide: 'https://i.ibb.co/your-guide/payment-guide.png'
 };
 
-// Admin channel ID - এখানে আপনার অ্যাডমিন চ্যানেলের ID দিন
+// Admin channel ID
 const ADMIN_CHANNEL_ID = 'YOUR_ADMIN_CHANNEL_ID_HERE';
 
 client.once('ready', () => {
     console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
+    console.log(`🤖 Bot ID: ${client.user.id}`);
+});
+
+// Debug all interactions
+client.on('interactionCreate', async (interaction) => {
+    console.log(`🔹 Interaction received: ${interaction.type} | ${interaction.customId || 'No Custom ID'}`);
+    
+    if (interaction.isStringSelectMenu()) {
+        console.log(`📝 Select Menu: ${interaction.customId} | Value: ${interaction.values[0]}`);
+    }
+    
+    if (interaction.isButton()) {
+        console.log(`🔘 Button Clicked: ${interaction.customId}`);
+    }
+    
+    if (interaction.isModalSubmit()) {
+        console.log(`📄 Modal Submitted: ${interaction.customId}`);
+    }
 });
 
 // Create Shop Command
 client.on('messageCreate', async (message) => {
     if (message.content === '!shop' && message.author.bot === false) {
+        console.log(`🛒 Shop command received from ${message.author.tag}`);
+        
         const embed = new EmbedBuilder()
             .setTitle('🛒 Welcome to DrkSurvraze Shop!')
             .setDescription('**Select an item from the dropdown menu below to start your purchase.**\n\n**Purchasing Process:**\n1. Select an item from dropdown\n2. Send money to our bKash/Nagad\n3. Click Purchase & fill details\n4. Wait for confirmation DM')
@@ -119,46 +141,14 @@ client.on('messageCreate', async (message) => {
             .setCustomId('item_select')
             .setPlaceholder('Select an item to purchase...')
             .addOptions([
-                { 
-                    label: '600 Token', 
-                    description: 'Price: 50 BDT', 
-                    value: '600_token' 
-                },
-                { 
-                    label: '1200 Token', 
-                    description: 'Price: 100 BDT', 
-                    value: '1200_token' 
-                },
-                { 
-                    label: '3000 Token', 
-                    description: 'Price: 250 BDT', 
-                    value: '3000_token' 
-                },
-                { 
-                    label: '6000 Token', 
-                    description: 'Price: 500 BDT', 
-                    value: '6000_token' 
-                },
-                { 
-                    label: '12000 Token', 
-                    description: 'Price: 1000 BDT', 
-                    value: '12000_token' 
-                },
-                { 
-                    label: 'VIP RANK', 
-                    description: 'Price: 125 BDT', 
-                    value: 'vip_rank' 
-                },
-                { 
-                    label: 'MVP RANK', 
-                    description: 'Price: 210 BDT', 
-                    value: 'mvp_rank' 
-                },
-                { 
-                    label: 'ELITE RANK', 
-                    description: 'Price: 300 BDT', 
-                    value: 'elite_rank' 
-                }
+                { label: '600 Token', description: 'Price: 50 BDT', value: '600_token' },
+                { label: '1200 Token', description: 'Price: 100 BDT', value: '1200_token' },
+                { label: '3000 Token', description: 'Price: 250 BDT', value: '3000_token' },
+                { label: '6000 Token', description: 'Price: 500 BDT', value: '6000_token' },
+                { label: '12000 Token', description: 'Price: 1000 BDT', value: '12000_token' },
+                { label: 'VIP RANK', description: 'Price: 125 BDT', value: 'vip_rank' },
+                { label: 'MVP RANK', description: 'Price: 210 BDT', value: 'mvp_rank' },
+                { label: 'ELITE RANK', description: 'Price: 300 BDT', value: 'elite_rank' }
             ]);
 
         const row = new ActionRowBuilder().addComponents(selectMenu);
@@ -175,6 +165,8 @@ client.on('interactionCreate', async (interaction) => {
     if (!interaction.isStringSelectMenu()) return;
 
     if (interaction.customId === 'item_select') {
+        console.log(`📦 Item selected: ${interaction.values[0]}`);
+        
         const selectedItem = interaction.values[0];
         const item = shopItems[selectedItem];
 
@@ -217,6 +209,8 @@ client.on('interactionCreate', async (interaction) => {
 
     // Handle Payment Method Selection - Step 2
     if (interaction.customId === 'payment_select') {
+        console.log(`💳 Payment method selected: ${interaction.values[0]}`);
+        
         const paymentMethod = interaction.values[0];
         
         // Get the original message to extract item info
@@ -293,12 +287,16 @@ client.on('interactionCreate', async (interaction) => {
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
+    console.log(`🔘 Button interaction detected: ${interaction.customId}`);
+
     if (interaction.customId.startsWith('purchase_')) {
+        console.log(`🛒 Purchase button clicked: ${interaction.customId}`);
+        
         const [_, itemId, paymentMethod] = interaction.customId.split('_');
         const item = shopItems[itemId];
         const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
 
-        console.log(`Purchase button clicked for ${itemId} with ${paymentMethod}`);
+        console.log(`📝 Preparing modal for: ${itemId} with ${paymentMethod}`);
 
         // Create Purchase Form Modal
         const modal = new ModalBuilder()
@@ -340,10 +338,11 @@ client.on('interactionCreate', async (interaction) => {
         modal.addComponents(firstActionRow, secondActionRow, thirdActionRow);
 
         try {
+            console.log(`📤 Showing modal for user: ${interaction.user.tag}`);
             await interaction.showModal(modal);
-            console.log('Modal shown successfully');
+            console.log(`✅ Modal shown successfully for: ${interaction.user.tag}`);
         } catch (error) {
-            console.error('Error showing modal:', error);
+            console.error('❌ Error showing modal:', error);
             await interaction.reply({
                 content: '❌ Error opening form. Please try again.',
                 ephemeral: true
@@ -356,6 +355,8 @@ client.on('interactionCreate', async (interaction) => {
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isModalSubmit()) return;
 
+    console.log(`📄 Modal submitted: ${interaction.customId}`);
+
     if (interaction.customId.startsWith('purchase_modal_')) {
         const [_, __, itemId, paymentMethod] = interaction.customId.split('_');
         const item = shopItems[itemId];
@@ -364,6 +365,8 @@ client.on('interactionCreate', async (interaction) => {
         const minecraftUsername = interaction.fields.getTextInputValue('minecraft_username');
         const paymentNumber = interaction.fields.getTextInputValue('payment_number');
         const transactionId = interaction.fields.getTextInputValue('transaction_id');
+
+        console.log(`✅ Order received: ${item.name} by ${minecraftUsername}`);
 
         // Send confirmation to user
         const userEmbed = new EmbedBuilder()
@@ -415,10 +418,20 @@ client.on('interactionCreate', async (interaction) => {
                 content: '📢 **New Order Received!**',
                 embeds: [adminEmbed] 
             });
+            console.log(`📢 Notification sent to admin channel`);
         } else {
-            console.log('❌ Admin channel not found! Please check ADMIN_CHANNEL_ID');
+            console.log('❌ Admin channel not found!');
         }
     }
+});
+
+// Error handling
+client.on('error', (error) => {
+    console.error('❌ Client error:', error);
+});
+
+process.on('unhandledRejection', (error) => {
+    console.error('❌ Unhandled promise rejection:', error);
 });
 
 client.login(process.env.DISCORD_TOKEN);
