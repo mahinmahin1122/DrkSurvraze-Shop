@@ -96,7 +96,7 @@ const shopImages = {
     paymentGuide: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
 };
 
-// Admin channel ID - Eta replace koro tomar admin channel ID diye
+// 🔧 ADMIN CHANNEL ID - এখানে আপনার অ্যাডমিন চ্যানেল ID দিন
 const ADMIN_CHANNEL_ID = '1324833964374290535';
 
 client.once('ready', () => {
@@ -251,7 +251,7 @@ client.on('interactionCreate', async (interaction) => {
             .setImage(shopImages.paymentGuide)
             .setFooter({ text: 'Make sure to use the Send Money option' });
 
-        // FIXED: Store item ID in a data attribute for easy retrieval
+        // Store item ID in a data attribute for easy retrieval
         const purchaseButton = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId(`purchase_${selectedItemId}_${paymentMethod}`)
@@ -276,7 +276,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('purchase_')) {
         console.log(`🛒 Purchase button clicked: ${interaction.customId}`);
         
-        // FIXED: Better parsing for custom ID
+        // Better parsing for custom ID
         const customIdParts = interaction.customId.split('_');
         
         // The custom ID format is: purchase_600_token_bkash
@@ -285,7 +285,6 @@ client.on('interactionCreate', async (interaction) => {
         const paymentMethod = customIdParts[3]; // 'bkash' or 'nagad'
         
         console.log(`🔍 Parsed - Item Key: ${itemKey}, Payment Method: ${paymentMethod}`);
-        console.log(`📋 Available items: ${Object.keys(shopItems).join(', ')}`);
         
         const item = shopItems[itemKey];
         
@@ -362,7 +361,7 @@ client.on('interactionCreate', async (interaction) => {
     console.log(`📄 Modal submitted: ${interaction.customId}`);
 
     if (interaction.customId.startsWith('purchase_modal_')) {
-        // FIXED: Proper parsing for modal custom ID
+        // Proper parsing for modal custom ID
         const customIdParts = interaction.customId.split('_');
         
         // The custom ID format is: purchase_modal_600_token_bkash
@@ -391,7 +390,7 @@ client.on('interactionCreate', async (interaction) => {
 
         console.log(`✅ Order received: ${item.name} by ${minecraftUsername}`);
 
-        // Send confirmation to user
+        // Send confirmation to user (ephemeral)
         const userEmbed = new EmbedBuilder()
             .setTitle('✅ Purchase Submitted - DrkSurvraze')
             .setColor(0x00FF00)
@@ -421,29 +420,86 @@ client.on('interactionCreate', async (interaction) => {
             ephemeral: true
         });
 
-        // Send notification to admin channel
+        // ✅ Send DM to user
+        try {
+            const userDMEmbed = new EmbedBuilder()
+                .setTitle('🛒 Order Confirmed - DrkSurvraze Shop')
+                .setColor(0x00FF00)
+                .setThumbnail(shopImages.success)
+                .addFields(
+                    { 
+                        name: '📦 Your Order', 
+                        value: item.tokens > 0 
+                            ? `**${item.name}** - ${item.tokens} Tokens\n**Price:** ${item.price} BDT` 
+                            : `**${item.name}**\n**Price:** ${item.price} BDT`,
+                        inline: false 
+                    },
+                    { 
+                        name: '👤 Account Info', 
+                        value: `**Minecraft:** ${minecraftUsername}\n**Payment:** ${paymentName} (${paymentNumber})`,
+                        inline: false 
+                    },
+                    { 
+                        name: '📋 Transaction ID', 
+                        value: transactionId,
+                        inline: false 
+                    }
+                )
+                .setDescription('**✅ Your order has been received!**\n\nWe are verifying your payment and will deliver your item within 1-2 hours.\n\n**Thank you for shopping with DrkSurvraze!**')
+                .setFooter({ 
+                    text: 'DrkSurvraze Minecraft Community', 
+                    iconURL: shopImages.logo 
+                })
+                .setTimestamp();
+
+            const user = await client.users.fetch(interaction.user.id);
+            await user.send({ embeds: [userDMEmbed] });
+            console.log(`📩 DM sent to user: ${interaction.user.tag}`);
+        } catch (dmError) {
+            console.log(`❌ Could not send DM to ${interaction.user.tag}:`, dmError.message);
+        }
+
+        // 📢 Send notification to admin channel
         const adminChannel = client.channels.cache.get(ADMIN_CHANNEL_ID);
         if (adminChannel) {
             const adminEmbed = new EmbedBuilder()
-                .setTitle('🛒 New Purchase Order - DrkSurvraze')
+                .setTitle('🛒 NEW ORDER - DrkSurvraze Shop')
                 .setColor(0xFFA500)
                 .setThumbnail(item.image)
                 .addFields(
-                    { name: '**👤 Customer Info**', value: `**Discord User:** ${interaction.user.tag}\n**Minecraft Username:** ${minecraftUsername}`, inline: false },
-                    { name: '**📦 Order Info**', value: item.tokens > 0 ? `**Item:** ${item.name}\n**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT` : `**Item:** ${item.name}\n**Price:** ${item.price} BDT`, inline: false },
-                    { name: '**💳 Payment Info**', value: `**Payment Method:** ${paymentName}\n**Customer ${paymentName}:** ${paymentNumber}\n**Transaction ID:** ${transactionId}`, inline: false },
-                    { name: '**⏰ Order Time**', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
+                    { 
+                        name: '**👤 CUSTOMER INFO**', 
+                        value: `**Discord User:** ${interaction.user.tag} (${interaction.user.id})\n**Minecraft Username:** ${minecraftUsername}`, 
+                        inline: false 
+                    },
+                    { 
+                        name: '**📦 ORDER INFO**', 
+                        value: item.tokens > 0 
+                            ? `**Item:** ${item.name}\n**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT` 
+                            : `**Item:** ${item.name}\n**Price:** ${item.price} BDT`, 
+                        inline: false 
+                    },
+                    { 
+                        name: '**💳 PAYMENT INFO**', 
+                        value: `**Payment Method:** ${paymentName}\n**Customer ${paymentName}:** ${paymentNumber}\n**Transaction ID:** ${transactionId}`, 
+                        inline: false 
+                    },
+                    { 
+                        name: '**⏰ ORDER TIME**', 
+                        value: `<t:${Math.floor(Date.now() / 1000)}:F>`, 
+                        inline: false 
+                    }
                 )
                 .setFooter({ text: 'Please verify the payment and deliver the item' })
                 .setTimestamp();
 
             await adminChannel.send({ 
-                content: '📢 **New Order Received!**',
+                content: '📢 **🚨 NEW ORDER RECEIVED! 🚨**',
                 embeds: [adminEmbed] 
             });
-            console.log(`📢 Notification sent to admin channel`);
+            console.log(`📢 Notification sent to admin channel: ${ADMIN_CHANNEL_ID}`);
         } else {
-            console.log('❌ Admin channel not found!');
+            console.log('❌ Admin channel not found! Please check ADMIN_CHANNEL_ID');
         }
     }
 });
@@ -457,4 +513,5 @@ process.on('unhandledRejection', (error) => {
     console.error('❌ Unhandled promise rejection:', error);
 });
 
+// Bot login
 client.login(process.env.DISCORD_TOKEN);
