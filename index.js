@@ -64,7 +64,7 @@ const shopItems = {
 
 // ImgBB Images for different sections
 const shopImages = {
-    banner: 'https://i.ibb.co/qM3TxZPK/SHOP.png',
+    banner: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
     
     success: 'https://i.ibb.co/your-success/success-icon.png',
     paymentGuide: 'https://i.ibb.co/your-guide/payment-guide.png'
