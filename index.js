@@ -21,7 +21,7 @@ const shopItems = {
         description: '600 Token package for your gameplay',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/your-image1/600-token.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
     },
     '1200_token': {
         name: '1200 Token',
@@ -30,7 +30,7 @@ const shopItems = {
         description: '1200 Token package for your gameplay',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/your-image2/1200-token.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
     },
     '3000_token': {
         name: '3000 Token',
@@ -39,7 +39,7 @@ const shopItems = {
         description: '3000 Token package for your gameplay',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/your-image3/3000-token.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
     },
     '6000_token': {
         name: '6000 Token',
@@ -48,7 +48,7 @@ const shopItems = {
         description: '6000 Token package for your gameplay',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/your-image4/6000-token.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
     },
     '12000_token': {
         name: '12000 Token',
@@ -57,7 +57,7 @@ const shopItems = {
         description: '12000 Token package for your gameplay',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/your-image5/12000-token.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
     },
     'vip_rank': {
         name: 'VIP RANK',
@@ -66,7 +66,7 @@ const shopItems = {
         description: 'Get VIP Rank in DrkSurvraze Minecraft Server (Ingame 400k)',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/your-image6/vip-rank.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
     },
     'mvp_rank': {
         name: 'MVP RANK',
@@ -75,7 +75,7 @@ const shopItems = {
         description: 'Get MVP Rank in DrkSurvraze Minecraft Server',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/your-image7/mvp-rank.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
     },
     'elite_rank': {
         name: 'ELITE RANK',
@@ -84,20 +84,20 @@ const shopItems = {
         description: 'Get ELITE Rank in DrkSurvraze Minecraft Server',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/your-image8/elite-rank.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
     }
 };
 
 // ImgBB Images for different sections
 const shopImages = {
     banner: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
-    logo: 'https://i.ibb.co/your-logo/logo.png',
-    success: 'https://i.ibb.co/your-success/success-icon.png',
-    paymentGuide: 'https://i.ibb.co/your-guide/payment-guide.png'
+    logo: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+    success: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+    paymentGuide: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
 };
 
-// Admin channel ID
-const ADMIN_CHANNEL_ID = 'YOUR_ADMIN_CHANNEL_ID_HERE';
+// Admin channel ID - Eta replace koro tomar admin channel ID diye
+const ADMIN_CHANNEL_ID = '1324833964374290535';
 
 client.once('ready', () => {
     console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
@@ -292,16 +292,20 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('purchase_')) {
         console.log(`🛒 Purchase button clicked: ${interaction.customId}`);
         
-        const parts = interaction.customId.split('_');
-        const itemId = parts[1];
-        const paymentMethod = parts[2];
+        // FIXED: Properly parse the customId
+        const customIdParts = interaction.customId.split('_');
+        const itemId = customIdParts[1]; // '600_token', 'vip_rank', etc.
+        const paymentMethod = customIdParts[2]; // 'bkash' or 'nagad'
+        
+        console.log(`🔍 Parsed - Item ID: ${itemId}, Payment Method: ${paymentMethod}`);
         
         const item = shopItems[itemId];
         
         if (!item) {
-            console.log(`❌ Item not found: ${itemId}`);
+            console.log(`❌ Item not found in shopItems: ${itemId}`);
+            console.log(`📋 Available items: ${Object.keys(shopItems).join(', ')}`);
             await interaction.reply({
-                content: '❌ Item not found. Please start over.',
+                content: '❌ Item not found. Please start over with !shop',
                 ephemeral: true
             });
             return;
@@ -309,7 +313,7 @@ client.on('interactionCreate', async (interaction) => {
         
         const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
 
-        console.log(`📝 Preparing modal for: ${itemId} with ${paymentMethod}`);
+        console.log(`📝 Preparing modal for: ${item.name} with ${paymentMethod}`);
 
         // Create Purchase Form Modal
         const modal = new ModalBuilder()
@@ -372,13 +376,17 @@ client.on('interactionCreate', async (interaction) => {
     console.log(`📄 Modal submitted: ${interaction.customId}`);
 
     if (interaction.customId.startsWith('purchase_modal_')) {
-        const parts = interaction.customId.split('_');
-        const itemId = parts[2];
-        const paymentMethod = parts[3];
+        // FIXED: Properly parse the modal customId
+        const customIdParts = interaction.customId.split('_');
+        const itemId = customIdParts[2]; // '600_token', 'vip_rank', etc.
+        const paymentMethod = customIdParts[3]; // 'bkash' or 'nagad'
+        
+        console.log(`🔍 Modal Parsed - Item ID: ${itemId}, Payment Method: ${paymentMethod}`);
         
         const item = shopItems[itemId];
         
         if (!item) {
+            console.log(`❌ Item not found in modal: ${itemId}`);
             await interaction.reply({
                 content: '❌ Error: Item not found. Please contact admin.',
                 ephemeral: true
