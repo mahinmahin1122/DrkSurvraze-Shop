@@ -96,20 +96,18 @@ const shopImages = {
     paymentGuide: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
 };
 
-// Admin Shop Channel ID - EIKHANE TOMAR ADMIN SHOP CHANNEL ER ID DIYE
-const ADMIN_SHOP_CHANNEL_ID = '1324833964374290535'; // EI ID TA CHANGE KORO
+// Admin channel ID - Eta replace koro tomar admin channel ID diye
+const ADMIN_CHANNEL_ID = '1324833964374290535';
 
 client.once('ready', () => {
     console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
     console.log(`🤖 Bot ID: ${client.user.id}`);
-    console.log(`📢 Admin Shop Channel: ${ADMIN_SHOP_CHANNEL_ID}`);
 });
 
-// Create Shop Command - ADMIN SHOP CHANNEL E
+// Create Shop Command
 client.on('messageCreate', async (message) => {
-    // Check if message is in admin shop channel and is !shop command
-    if (message.channel.id === ADMIN_SHOP_CHANNEL_ID && message.content === '!shop' && message.author.bot === false) {
-        console.log(`🛒 Shop command received from ${message.author.tag} in admin shop channel`);
+    if (message.content === '!shop' && message.author.bot === false) {
+        console.log(`🛒 Shop command received from ${message.author.tag}`);
         
         const embed = new EmbedBuilder()
             .setTitle('🛒 Welcome to DrkSurvraze Shop!')
@@ -253,6 +251,7 @@ client.on('interactionCreate', async (interaction) => {
             .setImage(shopImages.paymentGuide)
             .setFooter({ text: 'Make sure to use the Send Money option' });
 
+        // FIXED: Store item ID in a data attribute for easy retrieval
         const purchaseButton = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId(`purchase_${selectedItemId}_${paymentMethod}`)
@@ -272,6 +271,8 @@ client.on('interactionCreate', async (interaction) => {
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
+    console.log(`🔘 Button interaction detected: ${interaction.customId}`);
+
     if (interaction.customId.startsWith('purchase_')) {
         console.log(`🛒 Purchase button clicked: ${interaction.customId}`);
         
@@ -279,10 +280,12 @@ client.on('interactionCreate', async (interaction) => {
         const customIdParts = interaction.customId.split('_');
         
         // The custom ID format is: purchase_600_token_bkash
+        // So parts will be: ['purchase', '600', 'token', 'bkash']
         const itemKey = `${customIdParts[1]}_${customIdParts[2]}`; // This creates '600_token'
         const paymentMethod = customIdParts[3]; // 'bkash' or 'nagad'
         
         console.log(`🔍 Parsed - Item Key: ${itemKey}, Payment Method: ${paymentMethod}`);
+        console.log(`📋 Available items: ${Object.keys(shopItems).join(', ')}`);
         
         const item = shopItems[itemKey];
         
@@ -363,6 +366,7 @@ client.on('interactionCreate', async (interaction) => {
         const customIdParts = interaction.customId.split('_');
         
         // The custom ID format is: purchase_modal_600_token_bkash
+        // So parts will be: ['purchase', 'modal', '600', 'token', 'bkash']
         const itemKey = `${customIdParts[2]}_${customIdParts[3]}`; // This creates '600_token'
         const paymentMethod = customIdParts[4]; // 'bkash' or 'nagad'
         
@@ -417,52 +421,29 @@ client.on('interactionCreate', async (interaction) => {
             ephemeral: true
         });
 
-        // ✅ SEND ALL INFORMATION TO ADMIN SHOP CHANNEL
-        const adminShopChannel = client.channels.cache.get(ADMIN_SHOP_CHANNEL_ID);
-        if (adminShopChannel) {
-            const orderEmbed = new EmbedBuilder()
-                .setTitle('🛒 **NEW ORDER RECEIVED** 🛒')
-                .setColor(0xFF0000)
+        // Send notification to admin channel
+        const adminChannel = client.channels.cache.get(ADMIN_CHANNEL_ID);
+        if (adminChannel) {
+            const adminEmbed = new EmbedBuilder()
+                .setTitle('🛒 New Purchase Order - DrkSurvraze')
+                .setColor(0xFFA500)
                 .setThumbnail(item.image)
                 .addFields(
-                    { 
-                        name: '**👤 CUSTOMER INFORMATION**', 
-                        value: `**Discord User:** ${interaction.user.tag} (${interaction.user.id})\n**Minecraft Username:** ${minecraftUsername}`,
-                        inline: false 
-                    },
-                    { 
-                        name: '**📦 ORDER DETAILS**', 
-                        value: item.tokens > 0 
-                            ? `**Item:** ${item.name}\n**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT` 
-                            : `**Item:** ${item.name}\n**Price:** ${item.price} BDT`,
-                        inline: false 
-                    },
-                    { 
-                        name: '**💳 PAYMENT INFORMATION**', 
-                        value: `**Payment Method:** ${paymentName}\n**Customer ${paymentName}:** ${paymentNumber}\n**Transaction ID:** ${transactionId}\n**Our ${paymentName}:** ${paymentMethod === 'bkash' ? item.bKash : item.nagad}`,
-                        inline: false 
-                    },
-                    { 
-                        name: '**⏰ ORDER TIME**', 
-                        value: `<t:${Math.floor(Date.now() / 1000)}:F> (<t:${Math.floor(Date.now() / 1000)}:R>)`,
-                        inline: false 
-                    }
+                    { name: '**👤 Customer Info**', value: `**Discord User:** ${interaction.user.tag}\n**Minecraft Username:** ${minecraftUsername}`, inline: false },
+                    { name: '**📦 Order Info**', value: item.tokens > 0 ? `**Item:** ${item.name}\n**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT` : `**Item:** ${item.name}\n**Price:** ${item.price} BDT`, inline: false },
+                    { name: '**💳 Payment Info**', value: `**Payment Method:** ${paymentName}\n**Customer ${paymentName}:** ${paymentNumber}\n**Transaction ID:** ${transactionId}`, inline: false },
+                    { name: '**⏰ Order Time**', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
                 )
-                .setFooter({ 
-                    text: `Order ID: ${Math.random().toString(36).substr(2, 9).toUpperCase()} | DrkSurvraze Shop`,
-                    iconURL: shopImages.logo 
-                })
+                .setFooter({ text: 'Please verify the payment and deliver the item' })
                 .setTimestamp();
 
-            // Send with ping for attention
-            await adminShopChannel.send({ 
-                content: `📢 **@here NEW ORDER!** 📢`,
-                embeds: [orderEmbed] 
+            await adminChannel.send({ 
+                content: '📢 **New Order Received!**',
+                embeds: [adminEmbed] 
             });
-            
-            console.log(`📢 All order information sent to admin shop channel`);
+            console.log(`📢 Notification sent to admin channel`);
         } else {
-            console.log('❌ Admin shop channel not found!');
+            console.log('❌ Admin channel not found!');
         }
     }
 });
