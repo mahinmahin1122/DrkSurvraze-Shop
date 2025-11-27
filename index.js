@@ -565,7 +565,7 @@ client.on('interactionCreate', async (interaction) => {
                     .setTimestamp();
 
                 await privateOrdersChannel.send({ 
-                    content: `📢 **🚨 NEW ${orderType} RECEIVED! 🚨**`,
+                    content: `@everyone\n📢 **🚨 NEW ${orderType} RECEIVED! 🚨**`,
                     embeds: [privateEmbed] 
                 });
                 console.log(`✅ Order sent to private channel: ${PRIVATE_ORDERS_CHANNEL_ID} (Type: ${item.type})`);
