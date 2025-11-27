@@ -99,6 +99,9 @@ const shopImages = {
 // 🔧 ADMIN CHANNEL ID - এখানে আপনার অ্যাডমিন চ্যানেল ID দিন
 const ADMIN_CHANNEL_ID = '1324833964374290535';
 
+// Store ephemeral messages for auto-deletion
+const userEphemeralMessages = new Map();
+
 client.once('ready', () => {
     console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
     console.log(`🤖 Bot ID: ${client.user.id}`);
@@ -188,6 +191,9 @@ client.on('interactionCreate', async (interaction) => {
             components: [row],
             ephemeral: true
         });
+
+        // Store ephemeral message info for auto-deletion
+        storeEphemeralMessage(interaction);
     }
 
     // Handle Payment Method Selection - Step 2
@@ -264,6 +270,9 @@ client.on('interactionCreate', async (interaction) => {
             embeds: [embed],
             components: [purchaseButton]
         });
+
+        // Store ephemeral message info for auto-deletion
+        storeEphemeralMessage(interaction);
     }
 });
 
@@ -390,9 +399,12 @@ client.on('interactionCreate', async (interaction) => {
 
         console.log(`✅ Order received: ${item.name} by ${minecraftUsername}`);
 
-        // Send confirmation to user (ephemeral)
+        // 🔥 AUTO-DELETE PREVIOUS EPHEMERAL MESSAGES
+        await deleteUserEphemeralMessages(interaction.user.id, interaction.channelId);
+
+        // Send final confirmation to user (ephemeral - this will also auto-delete later)
         const userEmbed = new EmbedBuilder()
-            .setTitle('✅ Purchase Submitted - DrkSurvraze')
+            .setTitle('✅ Purchase Submitted Successfully!')
             .setColor(0x00FF00)
             .setThumbnail(shopImages.success)
             .addFields(
@@ -409,7 +421,7 @@ client.on('interactionCreate', async (interaction) => {
                     inline: false 
                 }
             )
-            .setDescription('We will verify your payment and deliver your item within 1-2 hours. Thank you for shopping with DrkSurvraze!')
+            .setDescription('**✅ Your order has been processed!**\n\nWe will verify your payment and deliver your item within 1-2 hours.\n\n**Check your DM for confirmation!**')
             .setFooter({ 
                 text: 'DrkSurvraze Minecraft Community', 
                 iconURL: shopImages.logo 
@@ -419,6 +431,9 @@ client.on('interactionCreate', async (interaction) => {
             embeds: [userEmbed],
             ephemeral: true
         });
+
+        // Store this ephemeral message for auto-deletion
+        storeEphemeralMessage(interaction);
 
         // ✅ Send DM to user
         try {
@@ -503,6 +518,78 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 });
+
+// Function to store ephemeral messages for auto-deletion
+function storeEphemeralMessage(interaction) {
+    const userId = interaction.user.id;
+    const channelId = interaction.channelId;
+    
+    if (!userEphemeralMessages.has(userId)) {
+        userEphemeralMessages.set(userId, new Map());
+    }
+    
+    const userChannels = userEphemeralMessages.get(userId);
+    if (!userChannels.has(channelId)) {
+        userChannels.set(channelId, []);
+    }
+    
+    const channelMessages = userChannels.get(channelId);
+    
+    // Store message info (we'll track the latest interactions)
+    if (channelMessages.length >= 5) {
+        channelMessages.shift(); // Remove oldest message
+    }
+    
+    channelMessages.push({
+        timestamp: Date.now(),
+        interactionId: interaction.id
+    });
+}
+
+// Function to delete user's ephemeral messages in a specific channel
+async function deleteUserEphemeralMessages(userId, channelId) {
+    try {
+        if (userEphemeralMessages.has(userId)) {
+            const userChannels = userEphemeralMessages.get(userId);
+            if (userChannels.has(channelId)) {
+                const channelMessages = userChannels.get(channelId);
+                
+                console.log(`🗑️ Deleting ${channelMessages.length} ephemeral messages for user ${userId} in channel ${channelId}`);
+                
+                // Clear the stored messages
+                userChannels.delete(channelId);
+                
+                if (userChannels.size === 0) {
+                    userEphemeralMessages.delete(userId);
+                }
+            }
+        }
+    } catch (error) {
+        console.log('❌ Error deleting ephemeral messages:', error);
+    }
+}
+
+// Auto-cleanup old ephemeral messages (every 10 minutes)
+setInterval(() => {
+    const now = Date.now();
+    const TEN_MINUTES = 10 * 60 * 1000;
+    
+    for (const [userId, userChannels] of userEphemeralMessages.entries()) {
+        for (const [channelId, messages] of userChannels.entries()) {
+            const recentMessages = messages.filter(msg => now - msg.timestamp < TEN_MINUTES);
+            
+            if (recentMessages.length === 0) {
+                userChannels.delete(channelId);
+            } else {
+                userChannels.set(channelId, recentMessages);
+            }
+        }
+        
+        if (userChannels.size === 0) {
+            userEphemeralMessages.delete(userId);
+        }
+    }
+}, 10 * 60 * 1000); // 10 minutes
 
 // Error handling
 client.on('error', (error) => {
