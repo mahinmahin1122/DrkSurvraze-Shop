@@ -94,16 +94,22 @@ const shopImages = {
     paymentGuide: 'https://i.ibb.co/your-guide/payment-guide.png'
 };
 
-// Admin channel ID - এখানে আপনার অ্যাডমিন চ্যানেলের ID দিন
-const ADMIN_CHANNEL_ID = 'YOUR_ADMIN_CHANNEL_ID_HERE';
+// Channel IDs - এখানে আপনার চ্যানেল IDs দিন
+const ADMIN_SHOP_CHANNEL_ID = 'YOUR_ADMIN_SHOP_CHANNEL_ID'; // যেখানে !shop কমান্ড কাজ করবে
+const ADMIN_ORDER_CHANNEL_ID = 'YOUR_ADMIN_ORDER_CHANNEL_ID'; // যেখানে অর্ডার নোটিফিকেশন যাবে
 
 client.once('ready', () => {
     console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
 });
 
-// Create Shop Command
+// Create Shop Command - শুধু অ্যাডমিন শপ চ্যানেলে কাজ করবে
 client.on('messageCreate', async (message) => {
     if (message.content === '!shop' && message.author.bot === false) {
+        // শুধু নির্দিষ্ট অ্যাডমিন শপ চ্যানেলে কাজ করবে
+        if (message.channel.id !== ADMIN_SHOP_CHANNEL_ID) {
+            return; // অন্য চ্যানেলে কমান্ড কাজ করবে না
+        }
+
         const embed = new EmbedBuilder()
             .setTitle('🛒 Welcome to DrkSurvraze Shop!')
             .setDescription('**Select an item from the dropdown menu below to start your purchase.**\n\n**Purchasing Process:**\n1. Select an item from dropdown\n2. Send money to our bKash/Nagad\n3. Click Purchase & fill details\n4. Wait for confirmation DM')
@@ -289,7 +295,7 @@ client.on('interactionCreate', async (interaction) => {
             .setPlaceholder('Enter your exact Minecraft username')
             .setRequired(true);
 
-        // Payment Number Input (auto-filled based on selection)
+        // Payment Number Input
         const paymentNumberInput = new TextInputBuilder()
             .setCustomId('payment_number')
             .setLabel(`Your ${paymentName} Number`)
@@ -358,9 +364,9 @@ client.on('interactionCreate', async (interaction) => {
             ephemeral: true
         });
 
-        // Send notification to admin channel
-        const adminChannel = client.channels.cache.get(ADMIN_CHANNEL_ID);
-        if (adminChannel) {
+        // Send notification to admin order channel
+        const adminOrderChannel = client.channels.cache.get(ADMIN_ORDER_CHANNEL_ID);
+        if (adminOrderChannel) {
             const adminEmbed = new EmbedBuilder()
                 .setTitle('🛒 New Purchase Order - DrkSurvraze')
                 .setColor(0xFFA500)
@@ -374,12 +380,12 @@ client.on('interactionCreate', async (interaction) => {
                 .setFooter({ text: 'Please verify the payment and deliver the item' })
                 .setTimestamp();
 
-            await adminChannel.send({ 
-                content: '📢 **New Order Received!**',
+            await adminOrderChannel.send({ 
+                content: '📢 **New Order Received!** <@&ADMIN_ROLE_ID>', // এখানে অ্যাডমিন রোলের ID দিন
                 embeds: [adminEmbed] 
             });
         } else {
-            console.log('❌ Admin channel not found! Please check ADMIN_CHANNEL_ID');
+            console.log('❌ Admin order channel not found! Please check ADMIN_ORDER_CHANNEL_ID');
         }
     }
 });
