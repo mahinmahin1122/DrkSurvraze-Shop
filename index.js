@@ -65,23 +65,32 @@ const shopItems = {
         nagad: '01777194638',
         image: 'https://i.ibb.co/your-image5/12000-token.png'
     },
-    'custom_token': {
-        name: 'Custom Token Amount',
-        price: 0, // Will be calculated based on user input
-        tokens: 0,
-        description: 'Purchase custom amount of tokens',
-        bKash: '01777194638',
-        nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image6/custom-token.png'
-    },
     'vip_rank': {
         name: 'VIP RANK',
-        price: 150,
-        tokens: 0, // VIP rank doesn't give tokens
-        description: 'Get VIP Rank in DrkSurvraze Minecraft Server',
+        price: 125,
+        tokens: 0,
+        description: 'Get VIP Rank in DrkSurvraze Minecraft Server (Ingame 400k)',
         bKash: '01777194638',
         nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image7/vip-rank.png'
+        image: 'https://i.ibb.co/your-image6/vip-rank.png'
+    },
+    'mvp_rank': {
+        name: 'MVP RANK',
+        price: 210,
+        tokens: 0,
+        description: 'Get MVP Rank in DrkSurvraze Minecraft Server',
+        bKash: '01777194638',
+        nagad: '01777194638',
+        image: 'https://i.ibb.co/your-image7/mvp-rank.png'
+    },
+    'elite_rank': {
+        name: 'ELITE RANK',
+        price: 300,
+        tokens: 0,
+        description: 'Get ELITE Rank in DrkSurvraze Minecraft Server',
+        bKash: '01777194638',
+        nagad: '01777194638',
+        image: 'https://i.ibb.co/your-image8/elite-rank.png'
     }
 };
 
@@ -120,8 +129,9 @@ client.on('messageCreate', async (message) => {
                 { label: '3000 Token', description: '250 BDT', value: '3000_token' },
                 { label: '6000 Token', description: '500 BDT', value: '6000_token' },
                 { label: '12000 Token', description: '1000 BDT', value: '12000_token' },
-                { label: 'Custom Token Amount', description: 'Buy custom tokens', value: 'custom_token' },
-                { label: 'VIP RANK', description: '150 BDT', value: 'vip_rank' }
+                { label: 'VIP RANK', description: '125 BDT (Ingame 400k)', value: 'vip_rank' },
+                { label: 'MVP RANK', description: '210 BDT', value: 'mvp_rank' },
+                { label: 'ELITE RANK', description: '300 BDT', value: 'elite_rank' }
             ]);
 
         const row = new ActionRowBuilder().addComponents(selectMenu);
@@ -145,38 +155,6 @@ client.on('interactionCreate', async (interaction) => {
         interaction.selectedItem = item;
         interaction.selectedItemId = selectedItem;
 
-        // For custom token, show a different interface
-        if (selectedItem === 'custom_token') {
-            const embed = new EmbedBuilder()
-                .setTitle('🛒 Custom Token Purchase - DrkSurvraze Shop')
-                .setColor(0xFFA500)
-                .setThumbnail(item.image)
-                .setDescription(`**Exchange Rate:** 1 BDT = ${TOKEN_RATE} Tokens\n\nPlease select your payment method to continue with custom token purchase.`)
-                .addFields(
-                    { name: '🎫 Item', value: 'Custom Token Amount', inline: true },
-                    { name: '💰 Rate', value: `1 BDT = ${TOKEN_RATE} Tokens`, inline: true },
-                    { name: '📝 Description', value: 'You will be able to specify the exact token amount during purchase', inline: false }
-                )
-                .setFooter({ text: 'Select your payment method below' });
-
-            const paymentSelect = new StringSelectMenuBuilder()
-                .setCustomId('payment_select_custom')
-                .setPlaceholder('Choose payment method...')
-                .addOptions([
-                    { label: 'bKash', description: 'Pay with bKash', value: 'bkash', emoji: '💳' },
-                    { label: 'Nagad', description: 'Pay with Nagad', value: 'nagad', emoji: '📱' }
-                ]);
-
-            const row = new ActionRowBuilder().addComponents(paymentSelect);
-
-            await interaction.reply({
-                embeds: [embed],
-                components: [row],
-                ephemeral: true
-            });
-            return;
-        }
-
         const embed = new EmbedBuilder()
             .setTitle(`🛒 ${item.name} - DrkSurvraze Shop`)
             .setColor(0xFFA500)
@@ -184,7 +162,7 @@ client.on('interactionCreate', async (interaction) => {
             .addFields(
                 { name: '🎫 Tokens', value: `**${item.tokens} Tokens**`, inline: true },
                 { name: '💰 Price', value: `${item.price} BDT`, inline: true },
-                { name: '⚡ Value', value: `**${item.tokens} Tokens** for ${item.price} BDT`, inline: false },
+                { name: '⚡ Value', value: item.tokens > 0 ? `**${item.tokens} Tokens** for ${item.price} BDT` : `${item.name} for ${item.price} BDT`, inline: false },
                 { name: '📝 Description', value: item.description, inline: false }
             )
             .setFooter({ text: 'Select your payment method below' });
@@ -203,42 +181,6 @@ client.on('interactionCreate', async (interaction) => {
             embeds: [embed],
             components: [row],
             ephemeral: true
-        });
-    }
-
-    // Handle Payment Method Selection for Custom Token - Special Case
-    if (interaction.customId === 'payment_select_custom') {
-        const paymentMethod = interaction.values[0];
-        const item = shopItems['custom_token'];
-        
-        const paymentNumber = paymentMethod === 'bkash' ? item.bKash : item.nagad;
-        const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
-        const paymentEmoji = paymentMethod === 'bkash' ? '💳' : '📱';
-
-        const embed = new EmbedBuilder()
-            .setTitle(`${paymentEmoji} Custom Token Purchase`)
-            .setColor(0x0099FF)
-            .setThumbnail(item.image)
-            .addFields(
-                { name: '🎫 Item', value: 'Custom Token Amount', inline: true },
-                { name: '💰 Rate', value: `1 BDT = ${TOKEN_RATE} Tokens`, inline: true },
-                { name: `📱 ${paymentName} Number`, value: `\`${paymentNumber}\``, inline: false }
-            )
-            .setDescription(`**How to Purchase Custom Tokens:**\n1. Decide how many tokens you want\n2. Calculate: Tokens ÷ ${TOKEN_RATE} = BDT amount\n3. Send calculated BDT to ${paymentName}\n4. Click 'Purchase Custom' button\n5. Enter token amount and transaction details`)
-            .setImage(shopImages.paymentGuide)
-            .setFooter({ text: `Example: 600 tokens = 50 BDT` });
-
-        const purchaseButton = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`purchase_custom_${paymentMethod}`)
-                .setLabel('Purchase Custom Tokens')
-                .setStyle(ButtonStyle.Success)
-                .setEmoji('🛒')
-        );
-
-        await interaction.update({
-            embeds: [embed],
-            components: [purchaseButton]
         });
     }
 
@@ -282,99 +224,46 @@ client.on('interactionCreate', async (interaction) => {
 
     // Handle Purchase Button Click - Step 3
     if (interaction.isButton() && interaction.customId.startsWith('purchase_')) {
-        if (interaction.customId.startsWith('purchase_custom_')) {
-            // Handle custom token purchase
-            const [_, __, paymentMethod] = interaction.customId.split('_');
-            const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
+        const [_, itemId, paymentMethod] = interaction.customId.split('_');
+        const item = shopItems[itemId];
+        const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
 
-            // Create Custom Purchase Modal
-            const modal = new ModalBuilder()
-                .setCustomId(`purchase_custom_modal_${paymentMethod}`)
-                .setTitle('Purchase Custom Tokens');
+        // Create Purchase Form Modal
+        const modal = new ModalBuilder()
+            .setCustomId(`purchase_modal_${itemId}_${paymentMethod}`)
+            .setTitle(`Purchase ${item.name}`);
 
-            // Token Amount Input
-            const tokenInput = new TextInputBuilder()
-                .setCustomId('token_amount')
-                .setLabel(`Token Amount (1 BDT = ${TOKEN_RATE} tokens)`)
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder(`Enter token amount`)
-                .setRequired(true);
+        // Minecraft Username Input
+        const minecraftInput = new TextInputBuilder()
+            .setCustomId('minecraft_username')
+            .setLabel('Your Minecraft Username')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Enter your exact Minecraft username')
+            .setRequired(true);
 
-            // Minecraft Username Input
-            const minecraftInput = new TextInputBuilder()
-                .setCustomId('minecraft_username')
-                .setLabel('Your Minecraft Username')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Enter your exact Minecraft username')
-                .setRequired(true);
+        // Transaction ID Input
+        const transactionInput = new TextInputBuilder()
+            .setCustomId('transaction_id')
+            .setLabel(`${paymentName} Transaction ID`)
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Enter your transaction ID')
+            .setRequired(true);
 
-            // Transaction ID Input
-            const transactionInput = new TextInputBuilder()
-                .setCustomId('transaction_id')
-                .setLabel(`${paymentName} Transaction ID`)
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Enter your transaction ID')
-                .setRequired(true);
+        // Phone Number Input
+        const phoneInput = new TextInputBuilder()
+            .setCustomId('phone_number')
+            .setLabel('Your Phone Number')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('01XXXXXXXXX')
+            .setRequired(true);
 
-            // Phone Number Input
-            const phoneInput = new TextInputBuilder()
-                .setCustomId('phone_number')
-                .setLabel('Your Phone Number')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('01XXXXXXXXX')
-                .setRequired(true);
+        const firstActionRow = new ActionRowBuilder().addComponents(minecraftInput);
+        const secondActionRow = new ActionRowBuilder().addComponents(transactionInput);
+        const thirdActionRow = new ActionRowBuilder().addComponents(phoneInput);
 
-            const firstActionRow = new ActionRowBuilder().addComponents(tokenInput);
-            const secondActionRow = new ActionRowBuilder().addComponents(minecraftInput);
-            const thirdActionRow = new ActionRowBuilder().addComponents(transactionInput);
-            const fourthActionRow = new ActionRowBuilder().addComponents(phoneInput);
+        modal.addComponents(firstActionRow, secondActionRow, thirdActionRow);
 
-            modal.addComponents(firstActionRow, secondActionRow, thirdActionRow, fourthActionRow);
-
-            await interaction.showModal(modal);
-        } else {
-            // Handle regular purchase
-            const [_, itemId, paymentMethod] = interaction.customId.split('_');
-            const item = shopItems[itemId];
-            const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
-
-            // Create Purchase Form Modal
-            const modal = new ModalBuilder()
-                .setCustomId(`purchase_modal_${itemId}_${paymentMethod}`)
-                .setTitle(`Purchase ${item.name}`);
-
-            // Minecraft Username Input
-            const minecraftInput = new TextInputBuilder()
-                .setCustomId('minecraft_username')
-                .setLabel('Your Minecraft Username')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Enter your exact Minecraft username')
-                .setRequired(true);
-
-            // Transaction ID Input
-            const transactionInput = new TextInputBuilder()
-                .setCustomId('transaction_id')
-                .setLabel(`${paymentName} Transaction ID`)
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Enter your transaction ID')
-                .setRequired(true);
-
-            // Phone Number Input
-            const phoneInput = new TextInputBuilder()
-                .setCustomId('phone_number')
-                .setLabel('Your Phone Number')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('01XXXXXXXXX')
-                .setRequired(true);
-
-            const firstActionRow = new ActionRowBuilder().addComponents(minecraftInput);
-            const secondActionRow = new ActionRowBuilder().addComponents(transactionInput);
-            const thirdActionRow = new ActionRowBuilder().addComponents(phoneInput);
-
-            modal.addComponents(firstActionRow, secondActionRow, thirdActionRow);
-
-            await interaction.showModal(modal);
-        }
+        await interaction.showModal(modal);
     }
 });
 
@@ -405,7 +294,7 @@ client.on('interactionCreate', async (interaction) => {
                 { name: '🆔 Transaction ID', value: transactionId, inline: true },
                 { name: '📱 Phone Number', value: phoneNumber, inline: true }
             )
-            .setDescription('We will verify your payment and deliver your tokens within 1-2 hours. Thank you for shopping with DrkSurvraze!')
+            .setDescription('We will verify your payment and deliver your item within 1-2 hours. Thank you for shopping with DrkSurvraze!')
             .setFooter({ 
                 text: 'DrkSurvraze Minecraft Community', 
                 iconURL: shopImages.logo 
@@ -427,66 +316,6 @@ client.on('interactionCreate', async (interaction) => {
                     { name: '🎫 Tokens', value: `${item.tokens} Tokens`, inline: true },
                     { name: '💰 Price', value: `${item.price} BDT`, inline: true },
                     { name: '📦 Package', value: item.name, inline: true },
-                    { name: '💳 Payment Method', value: paymentName, inline: true },
-                    { name: '👤 Minecraft Username', value: minecraftUsername, inline: false },
-                    { name: '🆔 Transaction ID', value: transactionId, inline: true },
-                    { name: '📱 Phone Number', value: phoneNumber, inline: true }
-                )
-                .setTimestamp();
-
-            await adminChannel.send({ embeds: [adminEmbed] });
-        }
-    }
-
-    // Handle Custom Token Modal Submission
-    if (interaction.customId.startsWith('purchase_custom_modal_')) {
-        const [_, __, ___, paymentMethod] = interaction.customId.split('_');
-        const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
-
-        const tokenAmount = parseInt(interaction.fields.getTextInputValue('token_amount'));
-        const minecraftUsername = interaction.fields.getTextInputValue('minecraft_username');
-        const transactionId = interaction.fields.getTextInputValue('transaction_id');
-        const phoneNumber = interaction.fields.getTextInputValue('phone_number');
-
-        // Calculate price based on token amount
-        const calculatedPrice = Math.ceil(tokenAmount / TOKEN_RATE);
-
-        // Send confirmation to user
-        const userEmbed = new EmbedBuilder()
-            .setTitle('✅ Custom Token Purchase Submitted - DrkSurvraze')
-            .setColor(0x00FF00)
-            .setThumbnail(shopImages.success)
-            .addFields(
-                { name: '🎫 Tokens', value: `**${tokenAmount} Tokens**`, inline: true },
-                { name: '💰 Price', value: `${calculatedPrice} BDT`, inline: true },
-                { name: '📦 Item', value: 'Custom Token Package', inline: true },
-                { name: '💳 Payment Method', value: paymentName, inline: true },
-                { name: '👤 Minecraft Username', value: minecraftUsername, inline: false },
-                { name: '🆔 Transaction ID', value: transactionId, inline: true },
-                { name: '📱 Phone Number', value: phoneNumber, inline: true }
-            )
-            .setDescription('We will verify your payment and deliver your tokens within 1-2 hours. Thank you for shopping with DrkSurvraze!')
-            .setFooter({ 
-                text: 'DrkSurvraze Minecraft Community', 
-                iconURL: shopImages.logo 
-            });
-
-        await interaction.reply({
-            embeds: [userEmbed],
-            ephemeral: true
-        });
-
-        // Send notification to admin channel
-        const adminChannel = client.channels.cache.get('ADMIN_CHANNEL_ID');
-        if (adminChannel) {
-            const adminEmbed = new EmbedBuilder()
-                .setTitle('🛒 New Custom Token Purchase - DrkSurvraze')
-                .setColor(0xFFA500)
-                .addFields(
-                    { name: '👤 User', value: interaction.user.tag, inline: true },
-                    { name: '🎫 Tokens', value: `${tokenAmount} Tokens`, inline: true },
-                    { name: '💰 Price', value: `${calculatedPrice} BDT`, inline: true },
-                    { name: '📦 Item', value: 'Custom Token Package', inline: true },
                     { name: '💳 Payment Method', value: paymentName, inline: true },
                     { name: '👤 Minecraft Username', value: minecraftUsername, inline: false },
                     { name: '🆔 Transaction ID', value: transactionId, inline: true },
