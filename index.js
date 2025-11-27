@@ -97,6 +97,9 @@ const shopImages = {
 // Admin channel ID - এখানে আপনার অ্যাডমিন চ্যানেলের ID দিন
 const ADMIN_CHANNEL_ID = 'YOUR_ADMIN_CHANNEL_ID_HERE';
 
+// Store user selections temporarily
+const userSelections = new Map();
+
 client.once('ready', () => {
     console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
 });
@@ -178,9 +181,11 @@ client.on('interactionCreate', async (interaction) => {
         const selectedItem = interaction.values[0];
         const item = shopItems[selectedItem];
 
-        // Store selected item in interaction for later use
-        interaction.selectedItem = item;
-        interaction.selectedItemId = selectedItem;
+        // Store selected item for this user
+        userSelections.set(interaction.user.id, {
+            itemId: selectedItem,
+            item: item
+        });
 
         const embed = new EmbedBuilder()
             .setTitle(`🛒 ${item.name} - DrkSurvraze Shop`)
@@ -222,12 +227,28 @@ client.on('interactionCreate', async (interaction) => {
     // Handle Payment Method Selection - Step 2
     if (interaction.customId === 'payment_select') {
         const paymentMethod = interaction.values[0];
-        const item = interaction.selectedItem;
-        const itemId = interaction.selectedItemId;
+        const userSelection = userSelections.get(interaction.user.id);
 
+        if (!userSelection) {
+            await interaction.reply({
+                content: '❌ Session expired. Please start over with !shop',
+                ephemeral: true
+            });
+            return;
+        }
+
+        const item = userSelection.item;
+        const itemId = userSelection.itemId;
         const paymentNumber = paymentMethod === 'bkash' ? item.bKash : item.nagad;
         const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
         const paymentEmoji = paymentMethod === 'bkash' ? '💳' : '📱';
+
+        // Update user selection with payment method
+        userSelections.set(interaction.user.id, {
+            ...userSelection,
+            paymentMethod: paymentMethod,
+            paymentName: paymentName
+        });
 
         const embed = new EmbedBuilder()
             .setTitle(`${paymentEmoji} ${item.name} - Payment Instructions`)
@@ -269,9 +290,13 @@ client.on('interactionCreate', async (interaction) => {
             components: [purchaseButton]
         });
     }
+});
 
-    // Handle Purchase Button Click - Step 3
-    if (interaction.isButton() && interaction.customId.startsWith('purchase_')) {
+// Handle Purchase Button Click - Step 3
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isButton()) return;
+
+    if (interaction.customId.startsWith('purchase_')) {
         const [_, itemId, paymentMethod] = interaction.customId.split('_');
         const item = shopItems[itemId];
         const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
@@ -289,12 +314,12 @@ client.on('interactionCreate', async (interaction) => {
             .setPlaceholder('Enter your exact Minecraft username')
             .setRequired(true);
 
-        // Payment Number Input (auto-filled based on selection)
+        // Payment Number Input
         const paymentNumberInput = new TextInputBuilder()
             .setCustomId('payment_number')
             .setLabel(`Your ${paymentName} Number`)
             .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Enter your payment number')
+            .setPlaceholder(`Enter your ${paymentName} number`)
             .setRequired(true);
 
         // Transaction ID Input
@@ -381,6 +406,9 @@ client.on('interactionCreate', async (interaction) => {
         } else {
             console.log('❌ Admin channel not found! Please check ADMIN_CHANNEL_ID');
         }
+
+        // Clean up user selection
+        userSelections.delete(interaction.user.id);
     }
 });
 
