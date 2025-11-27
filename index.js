@@ -96,9 +96,8 @@ const shopImages = {
     paymentGuide: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
 };
 
-// 🔧 CHANNEL IDs - এখানে আপনার চ্যানেল IDs দিন
-const ADMIN_CHANNEL_ID = '1324833964374290535'; // অ্যাডমিন চ্যানেল
-const PRIVATE_ORDERS_CHANNEL_ID = '1324833964374290536'; // 🔥 প্রাইভেট অর্ডারস চ্যানেল ID
+// 🔧 PRIVATE CHANNEL ID - আপনি যে চ্যানেলে SMS পাঠাতে চান
+const PRIVATE_ORDERS_CHANNEL_ID = '1443293560895049792'; // আপনার দেওয়া প্রাইভেট চ্যানেল ID
 
 // Store ephemeral messages for auto-deletion
 const userEphemeralMessages = new Map();
@@ -106,34 +105,26 @@ const userEphemeralMessages = new Map();
 client.once('ready', () => {
     console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
     console.log(`🤖 Bot ID: ${client.user.id}`);
-    console.log(`📊 Private orders channel: ${PRIVATE_ORDERS_CHANNEL_ID}`);
+    console.log(`🔒 All orders will be sent to private channel: ${PRIVATE_ORDERS_CHANNEL_ID}`);
     
     // Check channel permissions
     checkChannelPermissions();
 });
 
-// Check if bot has permission to send messages in channels
+// Check if bot has permission to send messages in private channel
 async function checkChannelPermissions() {
     try {
-        const adminChannel = client.channels.cache.get(ADMIN_CHANNEL_ID);
         const privateChannel = client.channels.cache.get(PRIVATE_ORDERS_CHANNEL_ID);
-        
-        if (adminChannel) {
-            const permissions = adminChannel.permissionsFor(client.user);
-            if (!permissions.has(PermissionsBitField.Flags.SendMessages)) {
-                console.log('❌ No permission to send messages in admin channel');
-            } else {
-                console.log('✅ Has permission in admin channel');
-            }
-        }
         
         if (privateChannel) {
             const permissions = privateChannel.permissionsFor(client.user);
             if (!permissions.has(PermissionsBitField.Flags.SendMessages)) {
-                console.log('❌ No permission to send messages in private orders channel');
+                console.log('❌ No permission to send messages in private channel');
             } else {
-                console.log('✅ Has permission in private orders channel');
+                console.log('✅ Has permission in private channel');
             }
+        } else {
+            console.log('❌ Private channel not found! Please check the channel ID');
         }
     } catch (error) {
         console.log('❌ Error checking channel permissions:', error);
@@ -147,7 +138,7 @@ client.on('messageCreate', async (message) => {
         
         const embed = new EmbedBuilder()
             .setTitle('🛒 Welcome to DrkSurvraze Shop!')
-            .setDescription('**Select an item from the dropdown menu below to start your purchase.**\n\n**Purchasing Process:**\n1. Select an item from dropdown\n2. Send money to our bKash/Nagad\n3. Click Purchase & fill details\n4. Wait for confirmation DM')
+            .setDescription('**Select an item from the dropdown menu below to start your purchase.**\n\n**Purchasing Process:**\n1. Select an item from dropdown\n2. Send money to our bKash/Nagad\n3. Click Purchase & fill details\n4. Wait for confirmation')
             .setColor(0x00FF00)
             .setThumbnail(shopImages.logo)
             .setImage(shopImages.banner)
@@ -454,7 +445,7 @@ client.on('interactionCreate', async (interaction) => {
                     inline: false 
                 }
             )
-            .setDescription('**✅ Your order has been processed!**\n\nWe will verify your payment and deliver your item within 1-2 hours.\n\n**Check your DM for confirmation!**')
+            .setDescription('**✅ Your order has been processed!**\n\nWe will verify your payment and deliver your item within 1-2 hours.\n\n**Thank you for shopping with DrkSurvraze!**')
             .setFooter({ 
                 text: 'DrkSurvraze Minecraft Community', 
                 iconURL: shopImages.logo 
@@ -468,139 +459,53 @@ client.on('interactionCreate', async (interaction) => {
         // Store this ephemeral message for auto-deletion
         storeEphemeralMessage(interaction);
 
-        // ✅ 1. Send DM to user
-        try {
-            const userDMEmbed = new EmbedBuilder()
-                .setTitle('🛒 Order Confirmed - DrkSurvraze Shop')
-                .setColor(0x00FF00)
-                .setThumbnail(shopImages.success)
-                .addFields(
-                    { 
-                        name: '📦 Your Order', 
-                        value: item.tokens > 0 
-                            ? `**${item.name}** - ${item.tokens} Tokens\n**Price:** ${item.price} BDT` 
-                            : `**${item.name}**\n**Price:** ${item.price} BDT`,
-                        inline: false 
-                    },
-                    { 
-                        name: '👤 Account Info', 
-                        value: `**Minecraft:** ${minecraftUsername}\n**Payment:** ${paymentName} (${paymentNumber})`,
-                        inline: false 
-                    },
-                    { 
-                        name: '📋 Transaction ID', 
-                        value: transactionId,
-                        inline: false 
-                    }
-                )
-                .setDescription('**✅ Your order has been received!**\n\nWe are verifying your payment and will deliver your item within 1-2 hours.\n\n**Thank you for shopping with DrkSurvraze!**')
-                .setFooter({ 
-                    text: 'DrkSurvraze Minecraft Community', 
-                    iconURL: shopImages.logo 
-                })
-                .setTimestamp();
-
-            const user = await client.users.fetch(interaction.user.id);
-            await user.send({ embeds: [userDMEmbed] });
-            console.log(`📩 DM sent to user: ${interaction.user.tag}`);
-        } catch (dmError) {
-            console.log(`❌ Could not send DM to ${interaction.user.tag}:`, dmError.message);
-        }
-
-        // ✅ 2. Send notification to admin channel
-        const adminChannel = client.channels.cache.get(ADMIN_CHANNEL_ID);
-        if (adminChannel) {
+        // ✅ Send to PRIVATE CHANNEL (আপনার দেওয়া চ্যানেলে)
+        const privateOrdersChannel = client.channels.cache.get(PRIVATE_ORDERS_CHANNEL_ID);
+        if (privateOrdersChannel) {
             try {
-                const adminEmbed = new EmbedBuilder()
+                const privateEmbed = new EmbedBuilder()
                     .setTitle('🛒 NEW ORDER - DrkSurvraze Shop')
-                    .setColor(0xFFA500)
+                    .setColor(0x00FF00)
                     .setThumbnail(item.image)
                     .addFields(
                         { 
-                            name: '**👤 CUSTOMER INFO**', 
-                            value: `**Discord User:** ${interaction.user.tag} (${interaction.user.id})\n**Minecraft Username:** ${minecraftUsername}`, 
+                            name: '**👤 CUSTOMER INFORMATION**', 
+                            value: `**Discord User:** ${interaction.user.tag}\n**Discord ID:** ${interaction.user.id}\n**Minecraft Username:** ${minecraftUsername}`, 
                             inline: false 
                         },
                         { 
-                            name: '**📦 ORDER INFO**', 
+                            name: '**📦 ORDER INFORMATION**', 
                             value: item.tokens > 0 
                                 ? `**Item:** ${item.name}\n**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT` 
                                 : `**Item:** ${item.name}\n**Price:** ${item.price} BDT`, 
                             inline: false 
                         },
                         { 
-                            name: '**💳 PAYMENT INFO**', 
-                            value: `**Payment Method:** ${paymentName}\n**Customer ${paymentName}:** ${paymentNumber}\n**Transaction ID:** ${transactionId}`, 
+                            name: '**💳 PAYMENT INFORMATION**', 
+                            value: `**Payment Method:** ${paymentName}\n**Customer ${paymentName} Number:** ${paymentNumber}\n**Transaction ID:** ${transactionId}`, 
                             inline: false 
                         },
                         { 
                             name: '**⏰ ORDER TIME**', 
-                            value: `<t:${Math.floor(Date.now() / 1000)}:F>`, 
+                            value: `<t:${Math.floor(Date.now() / 1000)}:F> (<t:${Math.floor(Date.now() / 1000)}:R>)`, 
                             inline: false 
                         }
                     )
-                    .setFooter({ text: 'Please verify the payment and deliver the item' })
-                    .setTimestamp();
-
-                await adminChannel.send({ 
-                    content: '📢 **🚨 NEW ORDER RECEIVED! 🚨**',
-                    embeds: [adminEmbed] 
-                });
-                console.log(`📢 Notification sent to admin channel: ${ADMIN_CHANNEL_ID}`);
-            } catch (adminError) {
-                console.log(`❌ Could not send to admin channel:`, adminError.message);
-            }
-        } else {
-            console.log('❌ Admin channel not found!');
-        }
-
-        // ✅ 3. Send to PRIVATE ORDERS CHANNEL (প্রাইভেট চ্যানেলে)
-        const privateOrdersChannel = client.channels.cache.get(PRIVATE_ORDERS_CHANNEL_ID);
-        if (privateOrdersChannel) {
-            try {
-                const privateEmbed = new EmbedBuilder()
-                    .setTitle('🔒 PRIVATE ORDER - DrkSurvraze Shop')
-                    .setColor(0x9B59B6)
-                    .setThumbnail(item.image)
-                    .addFields(
-                        { 
-                            name: '**👤 CUSTOMER DETAILS**', 
-                            value: `**Discord:** ${interaction.user.tag}\n**ID:** ${interaction.user.id}\n**Minecraft:** ${minecraftUsername}`, 
-                            inline: false 
-                        },
-                        { 
-                            name: '**📦 ORDER DETAILS**', 
-                            value: item.tokens > 0 
-                                ? `**Product:** ${item.name}\n**Tokens:** ${item.tokens}\n**Amount:** ${item.price} BDT` 
-                                : `**Product:** ${item.name}\n**Amount:** ${item.price} BDT`, 
-                            inline: true 
-                        },
-                        { 
-                            name: '**💳 PAYMENT DETAILS**', 
-                            value: `**Method:** ${paymentName}\n**Number:** ${paymentNumber}\n**TXN ID:** ${transactionId}`, 
-                            inline: true 
-                        },
-                        { 
-                            name: '**🕒 ORDER TIME**', 
-                            value: `<t:${Math.floor(Date.now() / 1000)}:F>\n(<t:${Math.floor(Date.now() / 1000)}:R>)`, 
-                            inline: false 
-                        }
-                    )
-                    .setFooter({ text: `Order ID: ${transactionId.substring(0, 8).toUpperCase()} | Private Records` })
+                    .setFooter({ text: 'DrkSurvraze Shop - Order Management' })
                     .setTimestamp();
 
                 await privateOrdersChannel.send({ 
-                    content: '🔐 **NEW PRIVATE ORDER RECORD**',
+                    content: '📢 **🚨 NEW ORDER RECEIVED! 🚨**',
                     embeds: [privateEmbed] 
                 });
-                console.log(`🔒 Order sent to private channel: ${PRIVATE_ORDERS_CHANNEL_ID}`);
+                console.log(`✅ Order sent to private channel: ${PRIVATE_ORDERS_CHANNEL_ID}`);
             } catch (privateError) {
                 console.log(`❌ Could not send to private channel:`, privateError.message);
-                console.log(`💡 Please check:\n1. Channel ID is correct: ${PRIVATE_ORDERS_CHANNEL_ID}\n2. Bot has permission to send messages\n3. Channel exists in the server`);
+                console.log(`💡 Please check:\n1. Channel ID: ${PRIVATE_ORDERS_CHANNEL_ID}\n2. Bot has permission to send messages\n3. Channel exists in the server`);
             }
         } else {
-            console.log(`❌ Private orders channel not found! ID: ${PRIVATE_ORDERS_CHANNEL_ID}`);
-            console.log('💡 Please check the channel ID and bot permissions');
+            console.log(`❌ Private channel not found! ID: ${PRIVATE_ORDERS_CHANNEL_ID}`);
+            console.log('💡 Please check the channel ID and make sure bot has access');
         }
     }
 });
