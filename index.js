@@ -96,8 +96,9 @@ const shopImages = {
     paymentGuide: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
 };
 
-// 🔧 ADMIN CHANNEL ID - এখানে আপনার অ্যাডমিন চ্যানেল ID দিন
-const ADMIN_CHANNEL_ID = '1324833964374290535';
+// 🔧 CHANNEL IDs - এখানে আপনার চ্যানেল IDs দিন
+const ADMIN_CHANNEL_ID = '1324833964374290535'; // অ্যাডমিন চ্যানেল
+const ORDER_LOGS_CHANNEL_ID = '1324833964374290536'; // নতুন অর্ডার লগস চ্যানেল (আপনার ID দিন)
 
 // Store ephemeral messages for auto-deletion
 const userEphemeralMessages = new Map();
@@ -105,6 +106,7 @@ const userEphemeralMessages = new Map();
 client.once('ready', () => {
     console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
     console.log(`🤖 Bot ID: ${client.user.id}`);
+    console.log(`📊 Order logs will be sent to channel: ${ORDER_LOGS_CHANNEL_ID}`);
 });
 
 // Create Shop Command
@@ -435,7 +437,7 @@ client.on('interactionCreate', async (interaction) => {
         // Store this ephemeral message for auto-deletion
         storeEphemeralMessage(interaction);
 
-        // ✅ Send DM to user
+        // ✅ 1. Send DM to user
         try {
             const userDMEmbed = new EmbedBuilder()
                 .setTitle('🛒 Order Confirmed - DrkSurvraze Shop')
@@ -474,7 +476,7 @@ client.on('interactionCreate', async (interaction) => {
             console.log(`❌ Could not send DM to ${interaction.user.tag}:`, dmError.message);
         }
 
-        // 📢 Send notification to admin channel
+        // ✅ 2. Send notification to admin channel
         const adminChannel = client.channels.cache.get(ADMIN_CHANNEL_ID);
         if (adminChannel) {
             const adminEmbed = new EmbedBuilder()
@@ -515,6 +517,54 @@ client.on('interactionCreate', async (interaction) => {
             console.log(`📢 Notification sent to admin channel: ${ADMIN_CHANNEL_ID}`);
         } else {
             console.log('❌ Admin channel not found! Please check ADMIN_CHANNEL_ID');
+        }
+
+        // ✅ 3. Send to NEW ORDER LOGS CHANNEL
+        const orderLogsChannel = client.channels.cache.get(ORDER_LOGS_CHANNEL_ID);
+        if (orderLogsChannel) {
+            const orderLogEmbed = new EmbedBuilder()
+                .setTitle('📋 ORDER LOG - DrkSurvraze Shop')
+                .setColor(0x3498DB)
+                .setThumbnail(item.image)
+                .addFields(
+                    { 
+                        name: '**👤 CUSTOMER**', 
+                        value: `**Discord:** ${interaction.user.tag}\n**Minecraft:** ${minecraftUsername}`, 
+                        inline: true 
+                    },
+                    { 
+                        name: '**📦 ORDER**', 
+                        value: item.tokens > 0 
+                            ? `**Item:** ${item.name}\n**Tokens:** ${item.tokens}` 
+                            : `**Item:** ${item.name}`, 
+                        inline: true 
+                    },
+                    { 
+                        name: '**💰 PAYMENT**', 
+                        value: `**Method:** ${paymentName}\n**Amount:** ${item.price} BDT\n**TXN ID:** ${transactionId}`, 
+                        inline: true 
+                    },
+                    { 
+                        name: '**📞 CONTACT**', 
+                        value: `**${paymentName}:** ${paymentNumber}`, 
+                        inline: false 
+                    },
+                    { 
+                        name: '**⏰ TIME**', 
+                        value: `<t:${Math.floor(Date.now() / 1000)}:R>`, 
+                        inline: false 
+                    }
+                )
+                .setFooter({ text: `Order ID: ${transactionId.substring(0, 8)}` })
+                .setTimestamp();
+
+            await orderLogsChannel.send({ 
+                content: '📥 **New Order Logged**',
+                embeds: [orderLogEmbed] 
+            });
+            console.log(`📋 Order log sent to channel: ${ORDER_LOGS_CHANNEL_ID}`);
+        } else {
+            console.log('❌ Order logs channel not found! Please check ORDER_LOGS_CHANNEL_ID');
         }
     }
 });
