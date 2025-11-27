@@ -13,57 +13,57 @@ const client = new Client({
 // Exchange rate: 1 BDT = 12 tokens
 const TOKEN_RATE = 12;
 
-// Calculate token amounts based on BDT prices
+// Calculate tokens based on fixed BDT prices
 function calculateTokens(priceBDT) {
     return priceBDT * TOKEN_RATE;
 }
 
 // DrkSurvraze Shop Items with ImgBB URLs
 const shopItems = {
-    '500_token': {
-        name: '500 Token',
-        price: Math.ceil(500 / TOKEN_RATE), // 42 BDT for 500 tokens
-        tokens: 500,
-        description: '500 Token package',
+    '50_bdt': {
+        name: '50 BDT Package',
+        price: 50,
+        tokens: calculateTokens(50), // 600 tokens
+        description: '600 Token package',
         bKash: '01777194638',
         nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image1/500-token.png'
+        image: 'https://i.ibb.co/your-image1/50-bdt.png'
     },
-    '1000_token': {
-        name: '1000 Token',
-        price: Math.ceil(1000 / TOKEN_RATE), // 84 BDT for 1000 tokens
-        tokens: 1000,
-        description: '1000 Token package',
+    '100_bdt': {
+        name: '100 BDT Package',
+        price: 100,
+        tokens: calculateTokens(100), // 1200 tokens
+        description: '1200 Token package',
         bKash: '01777194638',
         nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image2/1000-token.png'
+        image: 'https://i.ibb.co/your-image2/100-bdt.png'
     },
-    '2500_token': {
-        name: '2500 Token',
-        price: Math.ceil(2500 / TOKEN_RATE), // 209 BDT for 2500 tokens
-        tokens: 2500,
-        description: '2500 Token package',
+    '250_bdt': {
+        name: '250 BDT Package',
+        price: 250,
+        tokens: calculateTokens(250), // 3000 tokens
+        description: '3000 Token package',
         bKash: '01777194638',
         nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image3/2500-token.png'
+        image: 'https://i.ibb.co/your-image3/250-bdt.png'
     },
-    '5000_token': {
-        name: '5000 Token',
-        price: Math.ceil(5000 / TOKEN_RATE), // 417 BDT for 5000 tokens
-        tokens: 5000,
-        description: '5000 Token package',
+    '500_bdt': {
+        name: '500 BDT Package',
+        price: 500,
+        tokens: calculateTokens(500), // 6000 tokens
+        description: '6000 Token package',
         bKash: '01777194638',
         nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image4/5000-token.png'
+        image: 'https://i.ibb.co/your-image4/500-bdt.png'
     },
-    '10000_token': {
-        name: '10000 Token',
-        price: Math.ceil(10000 / TOKEN_RATE), // 834 BDT for 10000 tokens
-        tokens: 10000,
-        description: '10000 Token package',
+    '1000_bdt': {
+        name: '1000 BDT Package',
+        price: 1000,
+        tokens: calculateTokens(1000), // 12000 tokens
+        description: '12000 Token package',
         bKash: '01777194638',
         nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image5/10000-token.png'
+        image: 'https://i.ibb.co/your-image5/1000-bdt.png'
     },
     'custom_token': {
         name: 'Custom Token Amount',
@@ -115,11 +115,11 @@ client.on('messageCreate', async (message) => {
             .setCustomId('item_select')
             .setPlaceholder('Select an item to purchase...')
             .addOptions([
-                { label: '500 Token', description: `${shopItems['500_token'].price} BDT`, value: '500_token' },
-                { label: '1000 Token', description: `${shopItems['1000_token'].price} BDT`, value: '1000_token' },
-                { label: '2500 Token', description: `${shopItems['2500_token'].price} BDT`, value: '2500_token' },
-                { label: '5000 Token', description: `${shopItems['5000_token'].price} BDT`, value: '5000_token' },
-                { label: '10000 Token', description: `${shopItems['10000_token'].price} BDT`, value: '10000_token' },
+                { label: '50 BDT Package', description: `${shopItems['50_bdt'].tokens} Tokens`, value: '50_bdt' },
+                { label: '100 BDT Package', description: `${shopItems['100_bdt'].tokens} Tokens`, value: '100_bdt' },
+                { label: '250 BDT Package', description: `${shopItems['250_bdt'].tokens} Tokens`, value: '250_bdt' },
+                { label: '500 BDT Package', description: `${shopItems['500_bdt'].tokens} Tokens`, value: '500_bdt' },
+                { label: '1000 BDT Package', description: `${shopItems['1000_bdt'].tokens} Tokens`, value: '1000_bdt' },
                 { label: 'Custom Token Amount', description: 'Buy custom tokens', value: 'custom_token' },
                 { label: 'VIP RANK', description: '150 BDT', value: 'vip_rank' }
             ]);
@@ -182,9 +182,9 @@ client.on('interactionCreate', async (interaction) => {
             .setColor(0xFFA500)
             .setThumbnail(item.image)
             .addFields(
-                { name: '📦 Item', value: item.name, inline: true },
-                { name: '💰 Price', value: `${item.price} BDT`, inline: true },
+                { name: '📦 Package', value: `${item.price} BDT`, inline: true },
                 { name: '🎫 Tokens', value: `${item.tokens} Tokens`, inline: true },
+                { name: '💰 Value', value: `${item.price} BDT = ${item.tokens} Tokens`, inline: false },
                 { name: '📝 Description', value: item.description, inline: false }
             )
             .setFooter({ text: 'Select your payment method below' });
@@ -226,7 +226,7 @@ client.on('interactionCreate', async (interaction) => {
             )
             .setDescription(`**How to Purchase Custom Tokens:**\n1. Decide how many tokens you want\n2. Calculate: Tokens ÷ ${TOKEN_RATE} = BDT amount\n3. Send calculated BDT to ${paymentName}\n4. Click 'Purchase Custom' button\n5. Enter token amount and transaction details`)
             .setImage(shopImages.paymentGuide)
-            .setFooter({ text: 'Example: 1200 tokens = 100 BDT' });
+            .setFooter({ text: `Example: 600 tokens = 50 BDT` });
 
         const purchaseButton = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
@@ -257,8 +257,7 @@ client.on('interactionCreate', async (interaction) => {
             .setColor(0x0099FF)
             .setThumbnail(item.image)
             .addFields(
-                { name: '📦 Item', value: item.name, inline: true },
-                { name: '💰 Price', value: `${item.price} BDT`, inline: true },
+                { name: '💰 Package', value: `${item.price} BDT`, inline: true },
                 { name: '🎫 Tokens', value: `${item.tokens} Tokens`, inline: true },
                 { name: `📱 ${paymentName} Number`, value: `\`${paymentNumber}\``, inline: false },
                 { name: '📝 Description', value: item.description, inline: false }
@@ -298,7 +297,7 @@ client.on('interactionCreate', async (interaction) => {
                 .setCustomId('token_amount')
                 .setLabel(`Token Amount (1 BDT = ${TOKEN_RATE} tokens)`)
                 .setStyle(TextInputStyle.Short)
-                .setPlaceholder(`Enter token amount (multiple of ${TOKEN_RATE})`)
+                .setPlaceholder(`Enter token amount`)
                 .setRequired(true);
 
             // Minecraft Username Input
@@ -398,15 +397,14 @@ client.on('interactionCreate', async (interaction) => {
             .setColor(0x00FF00)
             .setThumbnail(shopImages.success)
             .addFields(
-                { name: 'Item', value: item.name, inline: true },
-                { name: 'Price', value: `${item.price} BDT`, inline: true },
+                { name: 'Package', value: `${item.price} BDT`, inline: true },
                 { name: 'Tokens', value: `${item.tokens} Tokens`, inline: true },
                 { name: 'Payment Method', value: paymentName, inline: true },
                 { name: 'Minecraft Username', value: minecraftUsername, inline: false },
                 { name: 'Transaction ID', value: transactionId, inline: true },
                 { name: 'Phone Number', value: phoneNumber, inline: true }
             )
-            .setDescription('We will verify your payment and deliver your item within 1-2 hours. Thank you for shopping with DrkSurvraze!')
+            .setDescription('We will verify your payment and deliver your tokens within 1-2 hours. Thank you for shopping with DrkSurvraze!')
             .setFooter({ 
                 text: 'DrkSurvraze Minecraft Community', 
                 iconURL: shopImages.logo 
@@ -425,8 +423,7 @@ client.on('interactionCreate', async (interaction) => {
                 .setColor(0xFFA500)
                 .addFields(
                     { name: 'User', value: interaction.user.tag, inline: true },
-                    { name: 'Item', value: item.name, inline: true },
-                    { name: 'Price', value: `${item.price} BDT`, inline: true },
+                    { name: 'Package', value: `${item.price} BDT`, inline: true },
                     { name: 'Tokens', value: `${item.tokens} Tokens`, inline: true },
                     { name: 'Payment Method', value: paymentName, inline: true },
                     { name: 'Minecraft Username', value: minecraftUsername, inline: false },
