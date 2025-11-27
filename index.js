@@ -21,7 +21,8 @@ const shopItems = {
         description: '600 Token package for your gameplay',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+        type: 'token'
     },
     '1200_token': {
         name: '1200 Token',
@@ -30,7 +31,8 @@ const shopItems = {
         description: '1200 Token package for your gameplay',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+        type: 'token'
     },
     '3000_token': {
         name: '3000 Token',
@@ -39,7 +41,8 @@ const shopItems = {
         description: '3000 Token package for your gameplay',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+        type: 'token'
     },
     '6000_token': {
         name: '6000 Token',
@@ -48,7 +51,8 @@ const shopItems = {
         description: '6000 Token package for your gameplay',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+        type: 'token'
     },
     '12000_token': {
         name: '12000 Token',
@@ -57,7 +61,8 @@ const shopItems = {
         description: '12000 Token package for your gameplay',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+        type: 'token'
     },
     'vip_rank': {
         name: 'VIP RANK',
@@ -66,7 +71,8 @@ const shopItems = {
         description: 'Get VIP Rank in DrkSurvraze Minecraft Server (Ingame 400k)',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+        type: 'rank'
     },
     'mvp_rank': {
         name: 'MVP RANK',
@@ -75,7 +81,8 @@ const shopItems = {
         description: 'Get MVP Rank in DrkSurvraze Minecraft Server',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+        type: 'rank'
     },
     'elite_rank': {
         name: 'ELITE RANK',
@@ -84,7 +91,8 @@ const shopItems = {
         description: 'Get ELITE Rank in DrkSurvraze Minecraft Server',
         bKash: '01980583573',
         nagad: '01980583573',
-        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+        type: 'rank'
     }
 };
 
@@ -445,7 +453,7 @@ client.on('interactionCreate', async (interaction) => {
                     inline: false 
                 }
             )
-            .setDescription('**✅ Your order has been processed!**\n\nWe will verify your payment and deliver your item within 1-2 hours.\n\n**Thank you for shopping with DrkSurvraze!**')
+            .setDescription('**✅ Your order has been processed!**\n\nWe will verify your payment and deliver your item within 1-2 hours.\n\n**Check your DM for confirmation!**')
             .setFooter({ 
                 text: 'DrkSurvraze Minecraft Community', 
                 iconURL: shopImages.logo 
@@ -459,13 +467,75 @@ client.on('interactionCreate', async (interaction) => {
         // Store this ephemeral message for auto-deletion
         storeEphemeralMessage(interaction);
 
-        // ✅ Send to PRIVATE CHANNEL (আপনার দেওয়া চ্যানেলে)
+        // ✅ 1. Send DM to user (ইউজারের টাইপ অনুযায়ী আলাদা মেসেজ)
+        try {
+            let dmDescription = '';
+            let dmTitle = '';
+            
+            if (item.type === 'token') {
+                dmTitle = '🎮 Token Purchase Confirmed - DrkSurvraze';
+                dmDescription = `**✅ Your ${item.tokens} Tokens purchase has been received!**\n\nWe are verifying your payment and will add the tokens to your account within 1-2 hours.\n\n**Please make sure you are online in our Minecraft server for token delivery.**\n\n**Thank you for shopping with DrkSurvraze!**`;
+            } else if (item.type === 'rank') {
+                dmTitle = '👑 Rank Purchase Confirmed - DrkSurvraze';
+                dmDescription = `**✅ Your ${item.name} purchase has been received!**\n\nWe are verifying your payment and will upgrade your rank within 1-2 hours.\n\n**Please make sure you are online in our Minecraft server for rank upgrade.**\n\n**Thank you for choosing DrkSurvraze!**`;
+            } else {
+                dmTitle = '🛒 Order Confirmed - DrkSurvraze Shop';
+                dmDescription = `**✅ Your order has been received!**\n\nWe are verifying your payment and will deliver your item within 1-2 hours.\n\n**Thank you for shopping with DrkSurvraze!**`;
+            }
+
+            const userDMEmbed = new EmbedBuilder()
+                .setTitle(dmTitle)
+                .setColor(0x00FF00)
+                .setThumbnail(shopImages.success)
+                .addFields(
+                    { 
+                        name: '📦 Your Order', 
+                        value: item.tokens > 0 
+                            ? `**${item.name}** - ${item.tokens} Tokens\n**Price:** ${item.price} BDT` 
+                            : `**${item.name}**\n**Price:** ${item.price} BDT`,
+                        inline: false 
+                    },
+                    { 
+                        name: '👤 Account Info', 
+                        value: `**Minecraft:** ${minecraftUsername}\n**Payment:** ${paymentName} (${paymentNumber})`,
+                        inline: false 
+                    },
+                    { 
+                        name: '📋 Transaction ID', 
+                        value: transactionId,
+                        inline: false 
+                    }
+                )
+                .setDescription(dmDescription)
+                .setFooter({ 
+                    text: 'DrkSurvraze Minecraft Community', 
+                    iconURL: shopImages.logo 
+                })
+                .setTimestamp();
+
+            const user = await client.users.fetch(interaction.user.id);
+            await user.send({ embeds: [userDMEmbed] });
+            console.log(`📩 DM sent to user: ${interaction.user.tag} (Item Type: ${item.type})`);
+        } catch (dmError) {
+            console.log(`❌ Could not send DM to ${interaction.user.tag}:`, dmError.message);
+        }
+
+        // ✅ 2. Send to PRIVATE CHANNEL (আপনার দেওয়া চ্যানেলে)
         const privateOrdersChannel = client.channels.cache.get(PRIVATE_ORDERS_CHANNEL_ID);
         if (privateOrdersChannel) {
             try {
+                let orderType = '';
+                if (item.type === 'token') {
+                    orderType = '🪙 TOKEN ORDER';
+                } else if (item.type === 'rank') {
+                    orderType = '👑 RANK ORDER';
+                } else {
+                    orderType = '🛒 GENERAL ORDER';
+                }
+
                 const privateEmbed = new EmbedBuilder()
-                    .setTitle('🛒 NEW ORDER - DrkSurvraze Shop')
-                    .setColor(0x00FF00)
+                    .setTitle(`🛒 ${orderType} - DrkSurvraze Shop`)
+                    .setColor(item.type === 'token' ? 0x3498DB : item.type === 'rank' ? 0xF1C40F : 0x00FF00)
                     .setThumbnail(item.image)
                     .addFields(
                         { 
@@ -476,8 +546,8 @@ client.on('interactionCreate', async (interaction) => {
                         { 
                             name: '**📦 ORDER INFORMATION**', 
                             value: item.tokens > 0 
-                                ? `**Item:** ${item.name}\n**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT` 
-                                : `**Item:** ${item.name}\n**Price:** ${item.price} BDT`, 
+                                ? `**Item:** ${item.name}\n**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT\n**Type:** ${item.type.toUpperCase()}` 
+                                : `**Item:** ${item.name}\n**Price:** ${item.price} BDT\n**Type:** ${item.type.toUpperCase()}`, 
                             inline: false 
                         },
                         { 
@@ -495,10 +565,10 @@ client.on('interactionCreate', async (interaction) => {
                     .setTimestamp();
 
                 await privateOrdersChannel.send({ 
-                    content: '📢 **🚨 NEW ORDER RECEIVED! 🚨**',
+                    content: `📢 **🚨 NEW ${orderType} RECEIVED! 🚨**`,
                     embeds: [privateEmbed] 
                 });
-                console.log(`✅ Order sent to private channel: ${PRIVATE_ORDERS_CHANNEL_ID}`);
+                console.log(`✅ Order sent to private channel: ${PRIVATE_ORDERS_CHANNEL_ID} (Type: ${item.type})`);
             } catch (privateError) {
                 console.log(`❌ Could not send to private channel:`, privateError.message);
                 console.log(`💡 Please check:\n1. Channel ID: ${PRIVATE_ORDERS_CHANNEL_ID}\n2. Bot has permission to send messages\n3. Channel exists in the server`);
