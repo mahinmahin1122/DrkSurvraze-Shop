@@ -13,11 +13,6 @@ const client = new Client({
 // Exchange rate: 1 BDT = 12 tokens
 const TOKEN_RATE = 12;
 
-// Calculate tokens based on fixed BDT prices
-function calculateTokens(priceBDT) {
-    return priceBDT * TOKEN_RATE;
-}
-
 // DrkSurvraze Shop Items with ImgBB URLs
 const shopItems = {
     '600_token': {
@@ -27,7 +22,8 @@ const shopItems = {
         description: 'Get 600 Tokens for your gameplay',
         bKash: '01777194638',
         nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image1/600-token.png'
+        image: 'https://i.ibb.co/your-image1/600-token.png',
+        icon: '🪙'
     },
     '1200_token': {
         name: '1200 Token Package',
@@ -36,7 +32,8 @@ const shopItems = {
         description: 'Get 1200 Tokens for your gameplay',
         bKash: '01777194638',
         nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image2/1200-token.png'
+        image: 'https://i.ibb.co/your-image2/1200-token.png',
+        icon: '🪙🪙'
     },
     '3000_token': {
         name: '3000 Token Package',
@@ -45,7 +42,8 @@ const shopItems = {
         description: 'Get 3000 Tokens for your gameplay',
         bKash: '01777194638',
         nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image3/3000-token.png'
+        image: 'https://i.ibb.co/your-image3/3000-token.png',
+        icon: '🪙🪙🪙'
     },
     '6000_token': {
         name: '6000 Token Package',
@@ -54,7 +52,8 @@ const shopItems = {
         description: 'Get 6000 Tokens for your gameplay',
         bKash: '01777194638',
         nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image4/6000-token.png'
+        image: 'https://i.ibb.co/your-image4/6000-token.png',
+        icon: '🪙🪙🪙🪙'
     },
     '12000_token': {
         name: '12000 Token Package',
@@ -63,7 +62,8 @@ const shopItems = {
         description: 'Get 12000 Tokens for your gameplay',
         bKash: '01777194638',
         nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image5/12000-token.png'
+        image: 'https://i.ibb.co/your-image5/12000-token.png',
+        icon: '🪙🪙🪙🪙🪙'
     },
     'vip_rank': {
         name: 'VIP RANK',
@@ -72,7 +72,8 @@ const shopItems = {
         description: 'Get VIP Rank in DrkSurvraze Minecraft Server (Ingame 400k)',
         bKash: '01777194638',
         nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image6/vip-rank.png'
+        image: 'https://i.ibb.co/your-image6/vip-rank.png',
+        icon: '👑'
     },
     'mvp_rank': {
         name: 'MVP RANK',
@@ -81,7 +82,8 @@ const shopItems = {
         description: 'Get MVP Rank in DrkSurvraze Minecraft Server',
         bKash: '01777194638',
         nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image7/mvp-rank.png'
+        image: 'https://i.ibb.co/your-image7/mvp-rank.png',
+        icon: '🏆'
     },
     'elite_rank': {
         name: 'ELITE RANK',
@@ -90,7 +92,8 @@ const shopItems = {
         description: 'Get ELITE Rank in DrkSurvraze Minecraft Server',
         bKash: '01777194638',
         nagad: '01777194638',
-        image: 'https://i.ibb.co/your-image8/elite-rank.png'
+        image: 'https://i.ibb.co/your-image8/elite-rank.png',
+        icon: '⭐'
     }
 };
 
@@ -124,14 +127,14 @@ client.on('messageCreate', async (message) => {
             .setCustomId('item_select')
             .setPlaceholder('Select an item to purchase...')
             .addOptions([
-                { label: '600 Token', description: '50 BDT', value: '600_token' },
-                { label: '1200 Token', description: '100 BDT', value: '1200_token' },
-                { label: '3000 Token', description: '250 BDT', value: '3000_token' },
-                { label: '6000 Token', description: '500 BDT', value: '6000_token' },
-                { label: '12000 Token', description: '1000 BDT', value: '12000_token' },
-                { label: 'VIP RANK', description: '125 BDT (Ingame 400k)', value: 'vip_rank' },
-                { label: 'MVP RANK', description: '210 BDT', value: 'mvp_rank' },
-                { label: 'ELITE RANK', description: '300 BDT', value: 'elite_rank' }
+                { label: '🪙 600 Token', description: '50 BDT', value: '600_token' },
+                { label: '🪙🪙 1200 Token', description: '100 BDT', value: '1200_token' },
+                { label: '🪙🪙🪙 3000 Token', description: '250 BDT', value: '3000_token' },
+                { label: '🪙🪙🪙🪙 6000 Token', description: '500 BDT', value: '6000_token' },
+                { label: '🪙🪙🪙🪙🪙 12000 Token', description: '1000 BDT', value: '12000_token' },
+                { label: '👑 VIP RANK', description: '125 BDT (Ingame 400k)', value: 'vip_rank' },
+                { label: '🏆 MVP RANK', description: '210 BDT', value: 'mvp_rank' },
+                { label: '⭐ ELITE RANK', description: '300 BDT', value: 'elite_rank' }
             ]);
 
         const row = new ActionRowBuilder().addComponents(selectMenu);
@@ -156,11 +159,11 @@ client.on('interactionCreate', async (interaction) => {
         interaction.selectedItemId = selectedItem;
 
         const embed = new EmbedBuilder()
-            .setTitle(`🛒 ${item.name} - DrkSurvraze Shop`)
+            .setTitle(`${item.icon} ${item.name} - DrkSurvraze Shop`)
             .setColor(0xFFA500)
             .setThumbnail(item.image)
             .addFields(
-                { name: '🎫 Tokens', value: `**${item.tokens} Tokens**`, inline: true },
+                { name: `${item.icon} ${item.tokens > 0 ? 'Tokens' : 'Rank'}`, value: item.tokens > 0 ? `**${item.tokens} Tokens**` : `**${item.name}**`, inline: true },
                 { name: '💰 Price', value: `${item.price} BDT`, inline: true },
                 { name: '⚡ Value', value: item.tokens > 0 ? `**${item.tokens} Tokens** for ${item.price} BDT` : `${item.name} for ${item.price} BDT`, inline: false },
                 { name: '📝 Description', value: item.description, inline: false }
@@ -195,11 +198,11 @@ client.on('interactionCreate', async (interaction) => {
         const paymentEmoji = paymentMethod === 'bkash' ? '💳' : '📱';
 
         const embed = new EmbedBuilder()
-            .setTitle(`${paymentEmoji} ${item.name} - Payment Instructions`)
+            .setTitle(`${paymentEmoji} ${item.icon} ${item.name} - Payment Instructions`)
             .setColor(0x0099FF)
             .setThumbnail(item.image)
             .addFields(
-                { name: '🎫 Tokens', value: `**${item.tokens} Tokens**`, inline: true },
+                { name: `${item.icon} ${item.tokens > 0 ? 'Tokens' : 'Rank'}`, value: item.tokens > 0 ? `**${item.tokens} Tokens**` : `**${item.name}**`, inline: true },
                 { name: '💰 Price', value: `${item.price} BDT`, inline: true },
                 { name: `📱 ${paymentName} Number`, value: `\`${paymentNumber}\``, inline: false },
                 { name: '📝 Description', value: item.description, inline: false }
@@ -231,7 +234,7 @@ client.on('interactionCreate', async (interaction) => {
         // Create Purchase Form Modal
         const modal = new ModalBuilder()
             .setCustomId(`purchase_modal_${itemId}_${paymentMethod}`)
-            .setTitle(`Purchase ${item.name}`);
+            .setTitle(`Purchase ${item.icon} ${item.name}`);
 
         // Minecraft Username Input
         const minecraftInput = new TextInputBuilder()
@@ -286,9 +289,9 @@ client.on('interactionCreate', async (interaction) => {
             .setColor(0x00FF00)
             .setThumbnail(shopImages.success)
             .addFields(
-                { name: '🎫 Tokens', value: `**${item.tokens} Tokens**`, inline: true },
+                { name: `${item.icon} ${item.tokens > 0 ? 'Tokens' : 'Rank'}`, value: item.tokens > 0 ? `**${item.tokens} Tokens**` : `**${item.name}**`, inline: true },
                 { name: '💰 Price', value: `${item.price} BDT`, inline: true },
-                { name: '📦 Package', value: item.name, inline: true },
+                { name: '📦 Package', value: `${item.icon} ${item.name}`, inline: true },
                 { name: '💳 Payment Method', value: paymentName, inline: true },
                 { name: '👤 Minecraft Username', value: minecraftUsername, inline: false },
                 { name: '🆔 Transaction ID', value: transactionId, inline: true },
@@ -313,9 +316,9 @@ client.on('interactionCreate', async (interaction) => {
                 .setColor(0xFFA500)
                 .addFields(
                     { name: '👤 User', value: interaction.user.tag, inline: true },
-                    { name: '🎫 Tokens', value: `${item.tokens} Tokens`, inline: true },
+                    { name: `${item.icon} ${item.tokens > 0 ? 'Tokens' : 'Rank'}`, value: item.tokens > 0 ? `${item.tokens} Tokens` : item.name, inline: true },
                     { name: '💰 Price', value: `${item.price} BDT`, inline: true },
-                    { name: '📦 Package', value: item.name, inline: true },
+                    { name: '📦 Package', value: `${item.icon} ${item.name}`, inline: true },
                     { name: '💳 Payment Method', value: paymentName, inline: true },
                     { name: '👤 Minecraft Username', value: minecraftUsername, inline: false },
                     { name: '🆔 Transaction ID', value: transactionId, inline: true },
