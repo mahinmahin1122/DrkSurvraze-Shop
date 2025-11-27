@@ -17,8 +17,8 @@ const shopItems = {
         price: 50,
         tokens: 600,
         description: '600 Token package for your gameplay',
-        bKash: '01777194638',
-        nagad: '01777194638',
+        bKash: '01980583573',
+        nagad: '01980583573',
         image: 'https://i.ibb.co/your-image1/600-token.png'
     },
     '1200_token': {
@@ -26,8 +26,8 @@ const shopItems = {
         price: 100,
         tokens: 1200,
         description: '1200 Token package for your gameplay',
-        bKash: '01777194638',
-        nagad: '01777194638',
+        bKash: '01980583573',
+        nagad: '01980583573',
         image: 'https://i.ibb.co/your-image2/1200-token.png'
     },
     '3000_token': {
@@ -35,8 +35,8 @@ const shopItems = {
         price: 250,
         tokens: 3000,
         description: '3000 Token package for your gameplay',
-        bKash: '01777194638',
-        nagad: '01777194638',
+        bKash: '01980583573',
+        nagad: '01980583573',
         image: 'https://i.ibb.co/your-image3/3000-token.png'
     },
     '6000_token': {
@@ -44,8 +44,8 @@ const shopItems = {
         price: 500,
         tokens: 6000,
         description: '6000 Token package for your gameplay',
-        bKash: '01777194638',
-        nagad: '01777194638',
+        bKash: '01980583573',
+        nagad: '01980583573',
         image: 'https://i.ibb.co/your-image4/6000-token.png'
     },
     '12000_token': {
@@ -53,8 +53,8 @@ const shopItems = {
         price: 1000,
         tokens: 12000,
         description: '12000 Token package for your gameplay',
-        bKash: '01777194638',
-        nagad: '01777194638',
+        bKash: '01980583573',
+        nagad: '01980583573',
         image: 'https://i.ibb.co/your-image5/12000-token.png'
     },
     'vip_rank': {
@@ -62,8 +62,8 @@ const shopItems = {
         price: 125,
         tokens: 0,
         description: 'Get VIP Rank in DrkSurvraze Minecraft Server (Ingame 400k)',
-        bKash: '01777194638',
-        nagad: '01777194638',
+        bKash: '01980583573',
+        nagad: '01980583573',
         image: 'https://i.ibb.co/your-image6/vip-rank.png'
     },
     'mvp_rank': {
@@ -71,8 +71,8 @@ const shopItems = {
         price: 210,
         tokens: 0,
         description: 'Get MVP Rank in DrkSurvraze Minecraft Server',
-        bKash: '01777194638',
-        nagad: '01777194638',
+        bKash: '01980583573',
+        nagad: '01980583573',
         image: 'https://i.ibb.co/your-image7/mvp-rank.png'
     },
     'elite_rank': {
@@ -80,8 +80,8 @@ const shopItems = {
         price: 300,
         tokens: 0,
         description: 'Get ELITE Rank in DrkSurvraze Minecraft Server',
-        bKash: '01777194638',
-        nagad: '01777194638',
+        bKash: '01980583573',
+        nagad: '01980583573',
         image: 'https://i.ibb.co/your-image8/elite-rank.png'
     }
 };
@@ -93,6 +93,9 @@ const shopImages = {
     success: 'https://i.ibb.co/your-success/success-icon.png',
     paymentGuide: 'https://i.ibb.co/your-guide/payment-guide.png'
 };
+
+// Admin channel ID - এখানে আপনার অ্যাডমিন চ্যানেলের ID দিন
+const ADMIN_CHANNEL_ID = 'YOUR_ADMIN_CHANNEL_ID_HERE';
 
 client.once('ready', () => {
     console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
@@ -240,7 +243,7 @@ client.on('interactionCreate', async (interaction) => {
                 },
                 { 
                     name: `📱 ${paymentName} Number`, 
-                    value: `\`${paymentNumber}\``, 
+                    value: `**${paymentNumber}**`, 
                     inline: false 
                 },
                 { 
@@ -249,7 +252,7 @@ client.on('interactionCreate', async (interaction) => {
                     inline: false 
                 }
             )
-            .setDescription(`**How to Purchase:**\n1. Send **${item.price} BDT** to ${paymentName} number: ${paymentNumber}\n2. Click the 'Purchase' button below.\n3. Enter your Minecraft name and the ${paymentName} Transaction ID.`)
+            .setDescription(`**How to Purchase:**\n1. Send **${item.price} BDT** to ${paymentName} number: **${paymentNumber}**\n2. Click the 'Purchase' button below.\n3. Enter your Minecraft name and the ${paymentName} Transaction ID.`)
             .setImage(shopImages.paymentGuide)
             .setFooter({ text: 'Make sure to use the Send Money option' });
 
@@ -286,6 +289,14 @@ client.on('interactionCreate', async (interaction) => {
             .setPlaceholder('Enter your exact Minecraft username')
             .setRequired(true);
 
+        // Payment Number Input (auto-filled based on selection)
+        const paymentNumberInput = new TextInputBuilder()
+            .setCustomId('payment_number')
+            .setLabel(`Your ${paymentName} Number`)
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Enter your payment number')
+            .setRequired(true);
+
         // Transaction ID Input
         const transactionInput = new TextInputBuilder()
             .setCustomId('transaction_id')
@@ -294,17 +305,9 @@ client.on('interactionCreate', async (interaction) => {
             .setPlaceholder('Enter your transaction ID')
             .setRequired(true);
 
-        // Phone Number Input
-        const phoneInput = new TextInputBuilder()
-            .setCustomId('phone_number')
-            .setLabel('Your Phone Number')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('01XXXXXXXXX')
-            .setRequired(true);
-
         const firstActionRow = new ActionRowBuilder().addComponents(minecraftInput);
-        const secondActionRow = new ActionRowBuilder().addComponents(transactionInput);
-        const thirdActionRow = new ActionRowBuilder().addComponents(phoneInput);
+        const secondActionRow = new ActionRowBuilder().addComponents(paymentNumberInput);
+        const thirdActionRow = new ActionRowBuilder().addComponents(transactionInput);
 
         modal.addComponents(firstActionRow, secondActionRow, thirdActionRow);
 
@@ -322,8 +325,8 @@ client.on('interactionCreate', async (interaction) => {
         const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
 
         const minecraftUsername = interaction.fields.getTextInputValue('minecraft_username');
+        const paymentNumber = interaction.fields.getTextInputValue('payment_number');
         const transactionId = interaction.fields.getTextInputValue('transaction_id');
-        const phoneNumber = interaction.fields.getTextInputValue('phone_number');
 
         // Send confirmation to user
         const userEmbed = new EmbedBuilder()
@@ -340,7 +343,7 @@ client.on('interactionCreate', async (interaction) => {
                 },
                 { 
                     name: '👤 Customer Information', 
-                    value: `**Minecraft Username:** ${minecraftUsername}\n**Phone Number:** ${phoneNumber}\n**Payment Method:** ${paymentName}\n**Transaction ID:** ${transactionId}`,
+                    value: `**Minecraft Username:** ${minecraftUsername}\n**Payment Method:** ${paymentName}\n**Your ${paymentName} Number:** ${paymentNumber}\n**Transaction ID:** ${transactionId}`,
                     inline: false 
                 }
             )
@@ -356,24 +359,27 @@ client.on('interactionCreate', async (interaction) => {
         });
 
         // Send notification to admin channel
-        const adminChannel = client.channels.cache.get('ADMIN_CHANNEL_ID');
+        const adminChannel = client.channels.cache.get(ADMIN_CHANNEL_ID);
         if (adminChannel) {
             const adminEmbed = new EmbedBuilder()
-                .setTitle('🛒 New Purchase - DrkSurvraze')
+                .setTitle('🛒 New Purchase Order - DrkSurvraze')
                 .setColor(0xFFA500)
+                .setThumbnail(item.image)
                 .addFields(
-                    { name: '👤 User', value: interaction.user.tag, inline: true },
-                    { name: '📦 Item', value: item.name, inline: true },
-                    { name: '💰 Price', value: `${item.price} BDT`, inline: true },
-                    { name: '🎫 Tokens', value: item.tokens > 0 ? `${item.tokens} Tokens` : 'N/A', inline: true },
-                    { name: '💳 Payment Method', value: paymentName, inline: true },
-                    { name: '👤 Minecraft Username', value: minecraftUsername, inline: false },
-                    { name: '🆔 Transaction ID', value: transactionId, inline: true },
-                    { name: '📱 Phone Number', value: phoneNumber, inline: true }
+                    { name: '**👤 Customer Info**', value: `**Discord User:** ${interaction.user.tag}\n**Minecraft Username:** ${minecraftUsername}`, inline: false },
+                    { name: '**📦 Order Info**', value: item.tokens > 0 ? `**Item:** ${item.name}\n**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT` : `**Item:** ${item.name}\n**Price:** ${item.price} BDT`, inline: false },
+                    { name: '**💳 Payment Info**', value: `**Payment Method:** ${paymentName}\n**Customer ${paymentName}:** ${paymentNumber}\n**Transaction ID:** ${transactionId}`, inline: false },
+                    { name: '**⏰ Order Time**', value: `<t:${Math.floor(Date.now() / 1000)}:F>`, inline: false }
                 )
+                .setFooter({ text: 'Please verify the payment and deliver the item' })
                 .setTimestamp();
 
-            await adminChannel.send({ embeds: [adminEmbed] });
+            await adminChannel.send({ 
+                content: '📢 **New Order Received!**',
+                embeds: [adminEmbed] 
+            });
+        } else {
+            console.log('❌ Admin channel not found! Please check ADMIN_CHANNEL_ID');
         }
     }
 });
