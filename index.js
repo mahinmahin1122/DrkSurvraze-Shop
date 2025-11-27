@@ -104,23 +104,6 @@ client.once('ready', () => {
     console.log(`🤖 Bot ID: ${client.user.id}`);
 });
 
-// Debug all interactions
-client.on('interactionCreate', async (interaction) => {
-    console.log(`🔹 Interaction received: ${interaction.type} | ${interaction.customId || 'No Custom ID'}`);
-    
-    if (interaction.isStringSelectMenu()) {
-        console.log(`📝 Select Menu: ${interaction.customId} | Value: ${interaction.values[0]}`);
-    }
-    
-    if (interaction.isButton()) {
-        console.log(`🔘 Button Clicked: ${interaction.customId}`);
-    }
-    
-    if (interaction.isModalSubmit()) {
-        console.log(`📄 Modal Submitted: ${interaction.customId}`);
-    }
-});
-
 // Create Shop Command
 client.on('messageCreate', async (message) => {
     if (message.content === '!shop' && message.author.bot === false) {
@@ -268,6 +251,7 @@ client.on('interactionCreate', async (interaction) => {
             .setImage(shopImages.paymentGuide)
             .setFooter({ text: 'Make sure to use the Send Money option' });
 
+        // FIXED: Store item ID in a data attribute for easy retrieval
         const purchaseButton = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId(`purchase_${selectedItemId}_${paymentMethod}`)
@@ -292,18 +276,21 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('purchase_')) {
         console.log(`🛒 Purchase button clicked: ${interaction.customId}`);
         
-        // FIXED: Properly parse the customId
+        // FIXED: Better parsing for custom ID
         const customIdParts = interaction.customId.split('_');
-        const itemId = customIdParts[1]; // '600_token', 'vip_rank', etc.
-        const paymentMethod = customIdParts[2]; // 'bkash' or 'nagad'
         
-        console.log(`🔍 Parsed - Item ID: ${itemId}, Payment Method: ${paymentMethod}`);
+        // The custom ID format is: purchase_600_token_bkash
+        // So parts will be: ['purchase', '600', 'token', 'bkash']
+        const itemKey = `${customIdParts[1]}_${customIdParts[2]}`; // This creates '600_token'
+        const paymentMethod = customIdParts[3]; // 'bkash' or 'nagad'
         
-        const item = shopItems[itemId];
+        console.log(`🔍 Parsed - Item Key: ${itemKey}, Payment Method: ${paymentMethod}`);
+        console.log(`📋 Available items: ${Object.keys(shopItems).join(', ')}`);
+        
+        const item = shopItems[itemKey];
         
         if (!item) {
-            console.log(`❌ Item not found in shopItems: ${itemId}`);
-            console.log(`📋 Available items: ${Object.keys(shopItems).join(', ')}`);
+            console.log(`❌ Item not found for key: ${itemKey}`);
             await interaction.reply({
                 content: '❌ Item not found. Please start over with !shop',
                 ephemeral: true
@@ -313,11 +300,11 @@ client.on('interactionCreate', async (interaction) => {
         
         const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
 
-        console.log(`📝 Preparing modal for: ${item.name} with ${paymentMethod}`);
+        console.log(`✅ Found item: ${item.name}, Preparing modal...`);
 
         // Create Purchase Form Modal
         const modal = new ModalBuilder()
-            .setCustomId(`purchase_modal_${itemId}_${paymentMethod}`)
+            .setCustomId(`purchase_modal_${itemKey}_${paymentMethod}`)
             .setTitle(`Purchase ${item.name}`);
 
         // Minecraft Username Input
@@ -360,7 +347,6 @@ client.on('interactionCreate', async (interaction) => {
             console.log(`✅ Modal shown successfully for: ${interaction.user.tag}`);
         } catch (error) {
             console.error('❌ Error showing modal:', error);
-            // Try alternative response if modal fails
             await interaction.reply({
                 content: '❌ Error opening form. Please try clicking the Purchase button again.',
                 ephemeral: true
@@ -376,17 +362,20 @@ client.on('interactionCreate', async (interaction) => {
     console.log(`📄 Modal submitted: ${interaction.customId}`);
 
     if (interaction.customId.startsWith('purchase_modal_')) {
-        // FIXED: Properly parse the modal customId
+        // FIXED: Proper parsing for modal custom ID
         const customIdParts = interaction.customId.split('_');
-        const itemId = customIdParts[2]; // '600_token', 'vip_rank', etc.
-        const paymentMethod = customIdParts[3]; // 'bkash' or 'nagad'
         
-        console.log(`🔍 Modal Parsed - Item ID: ${itemId}, Payment Method: ${paymentMethod}`);
+        // The custom ID format is: purchase_modal_600_token_bkash
+        // So parts will be: ['purchase', 'modal', '600', 'token', 'bkash']
+        const itemKey = `${customIdParts[2]}_${customIdParts[3]}`; // This creates '600_token'
+        const paymentMethod = customIdParts[4]; // 'bkash' or 'nagad'
         
-        const item = shopItems[itemId];
+        console.log(`🔍 Modal Parsed - Item Key: ${itemKey}, Payment Method: ${paymentMethod}`);
+        
+        const item = shopItems[itemKey];
         
         if (!item) {
-            console.log(`❌ Item not found in modal: ${itemId}`);
+            console.log(`❌ Item not found in modal: ${itemKey}`);
             await interaction.reply({
                 content: '❌ Error: Item not found. Please contact admin.',
                 ephemeral: true
