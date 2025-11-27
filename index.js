@@ -97,9 +97,6 @@ const shopImages = {
 // Admin channel ID - এখানে আপনার অ্যাডমিন চ্যানেলের ID দিন
 const ADMIN_CHANNEL_ID = 'YOUR_ADMIN_CHANNEL_ID_HERE';
 
-// Store user selections temporarily
-const userSelections = new Map();
-
 client.once('ready', () => {
     console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
 });
@@ -181,12 +178,6 @@ client.on('interactionCreate', async (interaction) => {
         const selectedItem = interaction.values[0];
         const item = shopItems[selectedItem];
 
-        // Store selected item for this user
-        userSelections.set(interaction.user.id, {
-            itemId: selectedItem,
-            item: item
-        });
-
         const embed = new EmbedBuilder()
             .setTitle(`🛒 ${item.name} - DrkSurvraze Shop`)
             .setColor(0xFFA500)
@@ -227,28 +218,34 @@ client.on('interactionCreate', async (interaction) => {
     // Handle Payment Method Selection - Step 2
     if (interaction.customId === 'payment_select') {
         const paymentMethod = interaction.values[0];
-        const userSelection = userSelections.get(interaction.user.id);
+        
+        // Get the original message to extract item info
+        const originalEmbed = interaction.message.embeds[0];
+        const itemName = originalEmbed.title.split(' - ')[0].replace('🛒 ', '');
+        
+        // Find the item from shopItems
+        let selectedItemId = '';
+        let item = null;
+        
+        for (const [key, shopItem] of Object.entries(shopItems)) {
+            if (shopItem.name === itemName) {
+                selectedItemId = key;
+                item = shopItem;
+                break;
+            }
+        }
 
-        if (!userSelection) {
+        if (!item) {
             await interaction.reply({
-                content: '❌ Session expired. Please start over with !shop',
+                content: '❌ Item not found. Please start over with !shop',
                 ephemeral: true
             });
             return;
         }
 
-        const item = userSelection.item;
-        const itemId = userSelection.itemId;
         const paymentNumber = paymentMethod === 'bkash' ? item.bKash : item.nagad;
         const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
         const paymentEmoji = paymentMethod === 'bkash' ? '💳' : '📱';
-
-        // Update user selection with payment method
-        userSelections.set(interaction.user.id, {
-            ...userSelection,
-            paymentMethod: paymentMethod,
-            paymentName: paymentName
-        });
 
         const embed = new EmbedBuilder()
             .setTitle(`${paymentEmoji} ${item.name} - Payment Instructions`)
@@ -273,13 +270,13 @@ client.on('interactionCreate', async (interaction) => {
                     inline: false 
                 }
             )
-            .setDescription(`**How to Purchase:**\n1. Send **${item.price} BDT** to ${paymentName} number: **${paymentNumber}**\n2. Click the 'Purchase' button below.\n3. Enter your Minecraft name and the ${paymentName} Transaction ID.`)
+            .setDescription(`**How to Purchase:**\n1. Send **${item.price} BDT** to ${paymentName} number: **${paymentNumber}**\n2. Click the 'Purchase' button below.\n3. Enter your payment details in the form.`)
             .setImage(shopImages.paymentGuide)
             .setFooter({ text: 'Make sure to use the Send Money option' });
 
         const purchaseButton = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
-                .setCustomId(`purchase_${itemId}_${paymentMethod}`)
+                .setCustomId(`purchase_${selectedItemId}_${paymentMethod}`)
                 .setLabel('Purchase Now')
                 .setStyle(ButtonStyle.Success)
                 .setEmoji('🛒')
@@ -292,7 +289,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// Handle Purchase Button Click - Step 3
+// Handle Purchase Button Click - Step 3 (Modal Open)
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
@@ -300,6 +297,8 @@ client.on('interactionCreate', async (interaction) => {
         const [_, itemId, paymentMethod] = interaction.customId.split('_');
         const item = shopItems[itemId];
         const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
+
+        console.log(`Purchase button clicked for ${itemId} with ${paymentMethod}`);
 
         // Create Purchase Form Modal
         const modal = new ModalBuilder()
@@ -312,31 +311,44 @@ client.on('interactionCreate', async (interaction) => {
             .setLabel('Your Minecraft Username')
             .setStyle(TextInputStyle.Short)
             .setPlaceholder('Enter your exact Minecraft username')
-            .setRequired(true);
+            .setRequired(true)
+            .setMaxLength(20);
 
-        // Payment Number Input
+        // Payment Number Input (User's payment number)
         const paymentNumberInput = new TextInputBuilder()
             .setCustomId('payment_number')
             .setLabel(`Your ${paymentName} Number`)
             .setStyle(TextInputStyle.Short)
-            .setPlaceholder(`Enter your ${paymentName} number`)
-            .setRequired(true);
+            .setPlaceholder(`01XXXXXXXXX`)
+            .setRequired(true)
+            .setMaxLength(11);
 
         // Transaction ID Input
         const transactionInput = new TextInputBuilder()
             .setCustomId('transaction_id')
             .setLabel(`${paymentName} Transaction ID`)
             .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Enter your transaction ID')
-            .setRequired(true);
+            .setPlaceholder('Enter transaction ID from payment')
+            .setRequired(true)
+            .setMaxLength(20);
 
+        // Add inputs to modal
         const firstActionRow = new ActionRowBuilder().addComponents(minecraftInput);
         const secondActionRow = new ActionRowBuilder().addComponents(paymentNumberInput);
         const thirdActionRow = new ActionRowBuilder().addComponents(transactionInput);
 
         modal.addComponents(firstActionRow, secondActionRow, thirdActionRow);
 
-        await interaction.showModal(modal);
+        try {
+            await interaction.showModal(modal);
+            console.log('Modal shown successfully');
+        } catch (error) {
+            console.error('Error showing modal:', error);
+            await interaction.reply({
+                content: '❌ Error opening form. Please try again.',
+                ephemeral: true
+            });
+        }
     }
 });
 
@@ -367,7 +379,7 @@ client.on('interactionCreate', async (interaction) => {
                     inline: false 
                 },
                 { 
-                    name: '👤 Customer Information', 
+                    name: '👤 Your Information', 
                     value: `**Minecraft Username:** ${minecraftUsername}\n**Payment Method:** ${paymentName}\n**Your ${paymentName} Number:** ${paymentNumber}\n**Transaction ID:** ${transactionId}`,
                     inline: false 
                 }
@@ -406,9 +418,6 @@ client.on('interactionCreate', async (interaction) => {
         } else {
             console.log('❌ Admin channel not found! Please check ADMIN_CHANNEL_ID');
         }
-
-        // Clean up user selection
-        userSelections.delete(interaction.user.id);
     }
 });
 
