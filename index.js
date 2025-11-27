@@ -292,8 +292,21 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('purchase_')) {
         console.log(`🛒 Purchase button clicked: ${interaction.customId}`);
         
-        const [_, itemId, paymentMethod] = interaction.customId.split('_');
+        const parts = interaction.customId.split('_');
+        const itemId = parts[1];
+        const paymentMethod = parts[2];
+        
         const item = shopItems[itemId];
+        
+        if (!item) {
+            console.log(`❌ Item not found: ${itemId}`);
+            await interaction.reply({
+                content: '❌ Item not found. Please start over.',
+                ephemeral: true
+            });
+            return;
+        }
+        
         const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
 
         console.log(`📝 Preparing modal for: ${itemId} with ${paymentMethod}`);
@@ -343,8 +356,9 @@ client.on('interactionCreate', async (interaction) => {
             console.log(`✅ Modal shown successfully for: ${interaction.user.tag}`);
         } catch (error) {
             console.error('❌ Error showing modal:', error);
+            // Try alternative response if modal fails
             await interaction.reply({
-                content: '❌ Error opening form. Please try again.',
+                content: '❌ Error opening form. Please try clicking the Purchase button again.',
                 ephemeral: true
             });
         }
@@ -358,8 +372,20 @@ client.on('interactionCreate', async (interaction) => {
     console.log(`📄 Modal submitted: ${interaction.customId}`);
 
     if (interaction.customId.startsWith('purchase_modal_')) {
-        const [_, __, itemId, paymentMethod] = interaction.customId.split('_');
+        const parts = interaction.customId.split('_');
+        const itemId = parts[2];
+        const paymentMethod = parts[3];
+        
         const item = shopItems[itemId];
+        
+        if (!item) {
+            await interaction.reply({
+                content: '❌ Error: Item not found. Please contact admin.',
+                ephemeral: true
+            });
+            return;
+        }
+        
         const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
 
         const minecraftUsername = interaction.fields.getTextInputValue('minecraft_username');
