@@ -185,9 +185,9 @@ client.on('interactionCreate', async (interaction) => {
             .setThumbnail(item.image)
             .addFields(
                 { 
-                    name: '📦 Item Details', 
+                    name: '📦 Order Details', 
                     value: item.tokens > 0 
-                        ? `**Item:** ${item.name}\n**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT` 
+                        ? `**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT` 
                         : `**Item:** ${item.name}\n**Price:** ${item.price} BDT`,
                     inline: false 
                 },
@@ -234,7 +234,7 @@ client.on('interactionCreate', async (interaction) => {
                 { 
                     name: '📦 Order Summary', 
                     value: item.tokens > 0 
-                        ? `**Item:** ${item.name}\n**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT` 
+                        ? `**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT` 
                         : `**Item:** ${item.name}\n**Price:** ${item.price} BDT`,
                     inline: false 
                 },
@@ -334,7 +334,7 @@ client.on('interactionCreate', async (interaction) => {
                 { 
                     name: '📦 Order Details', 
                     value: item.tokens > 0 
-                        ? `**Item:** ${item.name}\n**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT` 
+                        ? `**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT` 
                         : `**Item:** ${item.name}\n**Price:** ${item.price} BDT`,
                     inline: false 
                 },
