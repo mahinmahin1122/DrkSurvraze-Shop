@@ -93,15 +93,42 @@ const shopItems = {
         nagad: '01980583573',
         image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
         type: 'rank'
+    },
+    // Custom Rank Item
+    'custom_rank': {
+        name: 'CUSTOM RANK',
+        price: 500,
+        tokens: 0,
+        description: 'Create your own custom rank with unique prefix and color',
+        bKash: '01980583573',
+        nagad: '01980583573',
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+        type: 'custom_rank',
+        requiresCustomForm: true
     }
 };
+
+// Available colors for custom rank
+const availableColors = [
+    { name: 'Red', value: 'RED', hex: '#FF0000', emoji: '🔴' },
+    { name: 'Blue', value: 'BLUE', hex: '#0000FF', emoji: '🔵' },
+    { name: 'Green', value: 'GREEN', hex: '#00FF00', emoji: '🟢' },
+    { name: 'Yellow', value: 'YELLOW', hex: '#FFFF00', emoji: '🟡' },
+    { name: 'Purple', value: 'PURPLE', hex: '#800080', emoji: '🟣' },
+    { name: 'Pink', value: 'PINK', hex: '#FFC0CB', emoji: '🌸' },
+    { name: 'Orange', value: 'ORANGE', hex: '#FFA500', emoji: '🟠' },
+    { name: 'Gold', value: 'GOLD', hex: '#FFD700', emoji: '⭐' },
+    { name: 'Cyan', value: 'CYAN', hex: '#00FFFF', emoji: '💎' },
+    { name: 'Rainbow', value: 'RAINBOW', hex: 'GRADIENT', emoji: '🌈' }
+];
 
 // ImgBB Images for different sections
 const shopImages = {
     banner: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
     logo: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
     success: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
-    paymentGuide: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
+    paymentGuide: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+    customRank: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
 };
 
 // 🔧 PRIVATE CHANNEL ID - আপনি যে চ্যানেলে SMS পাঠাতে চান
@@ -109,11 +136,14 @@ const PRIVATE_ORDERS_CHANNEL_ID = '1443293560895049792'; // আপনার দ�
 
 // Store ephemeral messages for auto-deletion
 const userEphemeralMessages = new Map();
+// Store custom rank data temporarily
+const customRankData = new Map();
 
 client.once('ready', () => {
     console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
     console.log(`🤖 Bot ID: ${client.user.id}`);
     console.log(`🔒 All orders will be sent to private channel: ${PRIVATE_ORDERS_CHANNEL_ID}`);
+    console.log(`🎨 Custom Rank feature enabled with ${availableColors.length} colors`);
     
     // Check channel permissions
     checkChannelPermissions();
@@ -150,6 +180,13 @@ client.on('messageCreate', async (message) => {
             .setColor(0x00FF00)
             .setThumbnail(shopImages.logo)
             .setImage(shopImages.banner)
+            .addFields(
+                {
+                    name: '🎨 New! CUSTOM RANK',
+                    value: 'Create your own unique rank with custom prefix and color!',
+                    inline: false
+                }
+            )
             .setFooter({ 
                 text: 'DrkSurvraze Minecraft Community', 
                 iconURL: shopImages.logo 
@@ -166,7 +203,8 @@ client.on('messageCreate', async (message) => {
                 { label: '12000 Token', description: 'Price: 1000 BDT', value: '12000_token' },
                 { label: 'VIP RANK', description: 'Price: 125 BDT', value: 'vip_rank' },
                 { label: 'MVP RANK', description: 'Price: 210 BDT', value: 'mvp_rank' },
-                { label: 'ELITE RANK', description: 'Price: 300 BDT', value: 'elite_rank' }
+                { label: 'ELITE RANK', description: 'Price: 300 BDT', value: 'elite_rank' },
+                { label: '🎨 CUSTOM RANK', description: 'Price: 500 BDT - Create your own!', value: 'custom_rank' }
             ]);
 
         const row = new ActionRowBuilder().addComponents(selectMenu);
@@ -258,6 +296,43 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
+        // CUSTOM RANK এর জন্য বিশেষ প্রসেস
+        if (item.requiresCustomForm) {
+            console.log(`🎨 Custom Rank selected, showing custom form for ${interaction.user.tag}`);
+            
+            // Step 1: Custom Prefix Input
+            const prefixModal = new ModalBuilder()
+                .setCustomId(`custom_rank_prefix_${paymentMethod}`)
+                .setTitle('🎨 Custom Rank Setup - Step 1/2');
+
+            // Prefix Input
+            const prefixInput = new TextInputBuilder()
+                .setCustomId('custom_prefix')
+                .setLabel('Your Custom Rank Prefix')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Example: [KING], [BOSS], [LEGEND] etc.')
+                .setRequired(true)
+                .setMaxLength(20);
+
+            // Description
+            const descInput = new TextInputBuilder()
+                .setCustomId('rank_description')
+                .setLabel('Rank Description (Optional)')
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder('Describe what your rank represents...')
+                .setRequired(false)
+                .setMaxLength(100);
+
+            const firstActionRow = new ActionRowBuilder().addComponents(prefixInput);
+            const secondActionRow = new ActionRowBuilder().addComponents(descInput);
+
+            prefixModal.addComponents(firstActionRow, secondActionRow);
+
+            await interaction.showModal(prefixModal);
+            return;
+        }
+
+        // Normal items এর জন্য সাধারণ প্রসেস
         const paymentNumber = paymentMethod === 'bkash' ? item.bKash : item.nagad;
         const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
         const paymentEmoji = paymentMethod === 'bkash' ? '💳' : '📱';
@@ -308,6 +383,155 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
+// Handle Custom Rank Prefix Modal Submission
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isModalSubmit()) return;
+
+    if (interaction.customId.startsWith('custom_rank_prefix_')) {
+        console.log(`🎨 Custom Rank prefix modal submitted by ${interaction.user.tag}`);
+        
+        const paymentMethod = interaction.customId.split('_')[3]; // bkash or nagad
+        const customPrefix = interaction.fields.getTextInputValue('custom_prefix');
+        const rankDescription = interaction.fields.getTextInputValue('rank_description') || 'No description provided';
+
+        // Store custom rank data temporarily
+        const tempData = {
+            prefix: customPrefix,
+            description: rankDescription,
+            paymentMethod: paymentMethod,
+            timestamp: Date.now(),
+            userId: interaction.user.id
+        };
+        
+        customRankData.set(interaction.user.id, tempData);
+
+        // Step 2: Color Selection
+        const embed = new EmbedBuilder()
+            .setTitle('🎨 Custom Rank Setup - Step 2/2')
+            .setColor(0x9B59B6)
+            .setThumbnail(shopImages.customRank)
+            .addFields(
+                { 
+                    name: '✅ Prefix Set!', 
+                    value: `**Your Prefix:** ${customPrefix}`,
+                    inline: false 
+                },
+                { 
+                    name: '📝 Description', 
+                    value: rankDescription,
+                    inline: false 
+                }
+            )
+            .setDescription('**Now choose a color for your rank:**\nSelect a color from the dropdown below to customize your rank appearance.')
+            .setFooter({ text: 'DrkSurvraze Custom Rank Builder' });
+
+        // Color Selection Dropdown
+        const colorOptions = availableColors.map(color => ({
+            label: color.name,
+            description: `Select ${color.name.toLowerCase()} color`,
+            value: color.value,
+            emoji: color.emoji
+        }));
+
+        const colorSelect = new StringSelectMenuBuilder()
+            .setCustomId(`custom_rank_color_${paymentMethod}`)
+            .setPlaceholder('🎨 Choose a color for your rank...')
+            .addOptions(colorOptions);
+
+        const row = new ActionRowBuilder().addComponents(colorSelect);
+
+        await interaction.reply({
+            embeds: [embed],
+            components: [row],
+            ephemeral: true
+        });
+
+        // Store ephemeral message info for auto-deletion
+        storeEphemeralMessage(interaction);
+    }
+
+    // Handle Custom Rank Color Selection
+    if (interaction.isStringSelectMenu() && interaction.customId.startsWith('custom_rank_color_')) {
+        console.log(`🎨 Custom Rank color selected by ${interaction.user.tag}`);
+        
+        const selectedColorValue = interaction.values[0];
+        const paymentMethod = interaction.customId.split('_')[3];
+        const userId = interaction.user.id;
+        
+        // Get stored data
+        const tempData = customRankData.get(userId);
+        if (!tempData) {
+            await interaction.reply({
+                content: '❌ Session expired. Please start over with !shop',
+                ephemeral: true
+            });
+            return;
+        }
+
+        // Find color details
+        const selectedColor = availableColors.find(c => c.value === selectedColorValue);
+        
+        // Update stored data
+        tempData.color = selectedColor;
+        tempData.colorName = selectedColor.name;
+        tempData.colorHex = selectedColor.hex;
+        customRankData.set(userId, tempData);
+
+        const item = shopItems['custom_rank'];
+        const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
+        const paymentNumber = paymentMethod === 'bkash' ? item.bKash : item.nagad;
+        const paymentEmoji = paymentMethod === 'bkash' ? '💳' : '📱';
+
+        // Show final payment instructions
+        const embed = new EmbedBuilder()
+            .setTitle(`🎨 ${item.name} - Payment Instructions`)
+            .setColor(0x9B59B6)
+            .setThumbnail(shopImages.customRank)
+            .addFields(
+                { 
+                    name: '📦 Custom Rank Details', 
+                    value: `**Price:** ${item.price} BDT\n**Type:** Custom Rank Creation`,
+                    inline: false 
+                },
+                { 
+                    name: '🎨 Customization', 
+                    value: `**Prefix:** ${tempData.prefix}\n**Color:** ${selectedColor.name} ${selectedColor.emoji}`,
+                    inline: false 
+                },
+                { 
+                    name: '📝 Description', 
+                    value: tempData.description,
+                    inline: false 
+                },
+                { 
+                    name: `📱 ${paymentName} Number`, 
+                    value: `**${paymentNumber}**`, 
+                    inline: false 
+                }
+            )
+            .setDescription(`**How to Purchase:**\n1. Send **${item.price} BDT** to ${paymentName} number: **${paymentNumber}**\n2. Click the 'Complete Purchase' button below.\n3. Enter your Minecraft username and payment details.`)
+            .setImage(shopImages.paymentGuide)
+            .setFooter({ text: 'Make sure to use the Send Money option' });
+
+        // Complete Purchase Button
+        const purchaseButton = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`purchase_custom_rank_${paymentMethod}`)
+                .setLabel('Complete Purchase')
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('🛒')
+        );
+
+        await interaction.update({
+            embeds: [embed],
+            components: [purchaseButton]
+        });
+
+        // Store ephemeral message info for auto-deletion
+        storeEphemeralMessage(interaction);
+    }
+});
+
 // Handle Purchase Button Click - Step 3 (Modal Open)
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
@@ -317,11 +541,83 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('purchase_')) {
         console.log(`🛒 Purchase button clicked: ${interaction.customId}`);
         
-        // Better parsing for custom ID
+        // Check if it's custom rank purchase
+        if (interaction.customId === 'purchase_custom_rank_bkash' || interaction.customId === 'purchase_custom_rank_nagad') {
+            console.log(`🎨 Custom Rank purchase button clicked by ${interaction.user.tag}`);
+            
+            const paymentMethod = interaction.customId.split('_')[2]; // bkash or nagad
+            const userId = interaction.user.id;
+            
+            // Get stored custom rank data
+            const tempData = customRankData.get(userId);
+            if (!tempData) {
+                await interaction.reply({
+                    content: '❌ Custom rank data not found. Please start over with !shop',
+                    ephemeral: true
+                });
+                return;
+            }
+
+            const item = shopItems['custom_rank'];
+            const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
+
+            // Create Custom Rank Purchase Form Modal
+            const modal = new ModalBuilder()
+                .setCustomId(`purchase_modal_custom_rank_${paymentMethod}`)
+                .setTitle(`🎨 Purchase Custom Rank`);
+
+            // Minecraft Username Input
+            const minecraftInput = new TextInputBuilder()
+                .setCustomId('minecraft_username')
+                .setLabel('Your Minecraft Username')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Enter your exact Minecraft username')
+                .setRequired(true)
+                .setMaxLength(20);
+
+            // Payment Number Input (User's payment number)
+            const paymentNumberInput = new TextInputBuilder()
+                .setCustomId('payment_number')
+                .setLabel(`Your ${paymentName} Number`)
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder(`01XXXXXXXXX`)
+                .setRequired(true)
+                .setMaxLength(11);
+
+            // Transaction ID Input
+            const transactionInput = new TextInputBuilder()
+                .setCustomId('transaction_id')
+                .setLabel(`${paymentName} Transaction ID`)
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Enter transaction ID from payment')
+                .setRequired(true)
+                .setMaxLength(20);
+
+            // Add inputs to modal
+            const firstActionRow = new ActionRowBuilder().addComponents(minecraftInput);
+            const secondActionRow = new ActionRowBuilder().addComponents(paymentNumberInput);
+            const thirdActionRow = new ActionRowBuilder().addComponents(transactionInput);
+
+            modal.addComponents(firstActionRow, secondActionRow, thirdActionRow);
+
+            try {
+                console.log(`📤 Showing custom rank modal for user: ${interaction.user.tag}`);
+                await interaction.showModal(modal);
+                console.log(`✅ Custom rank modal shown successfully for: ${interaction.user.tag}`);
+            } catch (error) {
+                console.error('❌ Error showing custom rank modal:', error);
+                await interaction.reply({
+                    content: '❌ Error opening form. Please try clicking the Purchase button again.',
+                    ephemeral: true
+                });
+            }
+            return;
+        }
+
+        // Normal items এর জন্য
         const customIdParts = interaction.customId.split('_');
         
         // The custom ID format is: purchase_600_token_bkash
-        // So parts will be: ['purchase', '600', 'token', 'bkash']
         const itemKey = `${customIdParts[1]}_${customIdParts[2]}`; // This creates '600_token'
         const paymentMethod = customIdParts[3]; // 'bkash' or 'nagad'
         
@@ -402,13 +698,180 @@ client.on('interactionCreate', async (interaction) => {
     console.log(`📄 Modal submitted: ${interaction.customId}`);
 
     if (interaction.customId.startsWith('purchase_modal_')) {
-        // Proper parsing for modal custom ID
+        // Check if it's custom rank
+        if (interaction.customId.startsWith('purchase_modal_custom_rank_')) {
+            console.log(`🎨 Custom Rank modal submitted: ${interaction.customId}`);
+            
+            const paymentMethod = interaction.customId.split('_')[3]; // bkash or nagad
+            const userId = interaction.user.id;
+            
+            // Get stored custom rank data
+            const tempData = customRankData.get(userId);
+            if (!tempData) {
+                await interaction.reply({
+                    content: '❌ Custom rank data not found. Please contact admin.',
+                    ephemeral: true
+                });
+                return;
+            }
+
+            const item = shopItems['custom_rank'];
+            const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
+
+            const minecraftUsername = interaction.fields.getTextInputValue('minecraft_username');
+            const paymentNumber = interaction.fields.getTextInputValue('payment_number');
+            const transactionId = interaction.fields.getTextInputValue('transaction_id');
+
+            console.log(`✅ Custom Rank order received: ${tempData.prefix} by ${minecraftUsername}`);
+
+            // 🔥 AUTO-DELETE PREVIOUS EPHEMERAL MESSAGES
+            await deleteUserEphemeralMessages(interaction.user.id, interaction.channelId);
+
+            // Send final confirmation to user
+            const userEmbed = new EmbedBuilder()
+                .setTitle('✅ Custom Rank Purchase Submitted!')
+                .setColor(0x9B59B6)
+                .setThumbnail(shopImages.success)
+                .addFields(
+                    { 
+                        name: '🎨 Custom Rank Details', 
+                        value: `**Price:** ${item.price} BDT\n**Type:** Custom Rank Creation`,
+                        inline: false 
+                    },
+                    { 
+                        name: '✨ Customization', 
+                        value: `**Prefix:** ${tempData.prefix}\n**Color:** ${tempData.colorName} ${tempData.color.emoji}`,
+                        inline: false 
+                    },
+                    { 
+                        name: '👤 Your Information', 
+                        value: `**Minecraft Username:** ${minecraftUsername}\n**Payment Method:** ${paymentName}\n**Your ${paymentName} Number:** ${paymentNumber}\n**Transaction ID:** ${transactionId}`,
+                        inline: false 
+                    },
+                    { 
+                        name: '📝 Description', 
+                        value: tempData.description,
+                        inline: false 
+                    }
+                )
+                .setDescription('**✅ Your custom rank has been ordered!**\n\nWe will verify your payment and create your custom rank within 1-2 hours.\n\n**Check your DM for confirmation!**')
+                .setFooter({ 
+                    text: 'DrkSurvraze Minecraft Community', 
+                    iconURL: shopImages.logo 
+                });
+
+            await interaction.reply({
+                embeds: [userEmbed],
+                ephemeral: true
+            });
+
+            // Store this ephemeral message for auto-deletion
+            storeEphemeralMessage(interaction);
+
+            // ✅ 1. Send DM to user
+            try {
+                const userDMEmbed = new EmbedBuilder()
+                    .setTitle('🎨 Custom Rank Order Confirmed - DrkSurvraze')
+                    .setColor(0x9B59B6)
+                    .setThumbnail(shopImages.customRank)
+                    .addFields(
+                        { 
+                            name: '🎨 Your Custom Rank', 
+                            value: `**Prefix:** ${tempData.prefix}\n**Color:** ${tempData.colorName} ${tempData.color.emoji}`,
+                            inline: false 
+                        },
+                        { 
+                            name: '💰 Payment Details', 
+                            value: `**Price:** ${item.price} BDT\n**Payment Method:** ${paymentName}`,
+                            inline: false 
+                        },
+                        { 
+                            name: '👤 Account Info', 
+                            value: `**Minecraft:** ${minecraftUsername}\n**Payment:** ${paymentName} (${paymentNumber})`,
+                            inline: false 
+                        },
+                        { 
+                            name: '📋 Transaction ID', 
+                            value: transactionId,
+                            inline: false 
+                        },
+                        { 
+                            name: '📝 Rank Description', 
+                            value: tempData.description,
+                            inline: false 
+                        }
+                    )
+                    .setDescription(`**✅ Your custom rank order has been received!**\n\nWe are verifying your payment and will create your custom rank within 1-2 hours.\n\n**Custom Rank Features:**\n• Unique prefix: ${tempData.prefix}\n• ${tempData.colorName} colored name\n• Special rank permissions\n\n**Please make sure you are online in our Minecraft server for rank setup.**\n\n**Thank you for choosing DrkSurvraze!**`)
+                    .setFooter({ 
+                        text: 'DrkSurvraze Minecraft Community', 
+                        iconURL: shopImages.logo 
+                    })
+                    .setTimestamp();
+
+                const user = await client.users.fetch(interaction.user.id);
+                await user.send({ embeds: [userDMEmbed] });
+                console.log(`📩 Custom Rank DM sent to user: ${interaction.user.tag}`);
+            } catch (dmError) {
+                console.log(`❌ Could not send DM to ${interaction.user.tag}:`, dmError.message);
+            }
+
+            // ✅ 2. Send to PRIVATE CHANNEL
+            const privateOrdersChannel = client.channels.cache.get(PRIVATE_ORDERS_CHANNEL_ID);
+            if (privateOrdersChannel) {
+                try {
+                    const privateEmbed = new EmbedBuilder()
+                        .setTitle(`🎨 CUSTOM RANK ORDER - DrkSurvraze Shop`)
+                        .setColor(0x9B59B6)
+                        .setThumbnail(shopImages.customRank)
+                        .addFields(
+                            { 
+                                name: '**👤 CUSTOMER INFORMATION**', 
+                                value: `**Discord User:** ${interaction.user.tag}\n**Discord ID:** ${interaction.user.id}\n**Minecraft Username:** ${minecraftUsername}`, 
+                                inline: false 
+                            },
+                            { 
+                                name: '**🎨 CUSTOM RANK DETAILS**', 
+                                value: `**Custom Prefix:** ${tempData.prefix}\n**Color:** ${tempData.colorName} (${tempData.colorHex})\n**Price:** ${item.price} BDT\n**Type:** CUSTOM RANK`, 
+                                inline: false 
+                            },
+                            { 
+                                name: '**📝 RANK DESCRIPTION**', 
+                                value: tempData.description, 
+                                inline: false 
+                            },
+                            { 
+                                name: '**💳 PAYMENT INFORMATION**', 
+                                value: `**Payment Method:** ${paymentName}\n**Customer ${paymentName} Number:** ${paymentNumber}\n**Transaction ID:** ${transactionId}`, 
+                                inline: false 
+                            },
+                            { 
+                                name: '**⏰ ORDER TIME**', 
+                                value: `<t:${Math.floor(Date.now() / 1000)}:F> (<t:${Math.floor(Date.now() / 1000)}:R>)`, 
+                                inline: false 
+                            }
+                        )
+                        .setFooter({ text: 'DrkSurvraze Shop - Custom Rank Order' })
+                        .setTimestamp();
+
+                    await privateOrdersChannel.send({ 
+                        content: `@everyone\n📢 **🚨 🎨 NEW CUSTOM RANK ORDER RECEIVED! 🚨**`,
+                        embeds: [privateEmbed] 
+                    });
+                    console.log(`✅ Custom Rank order sent to private channel: ${PRIVATE_ORDERS_CHANNEL_ID}`);
+                } catch (privateError) {
+                    console.log(`❌ Could not send custom rank to private channel:`, privateError.message);
+                }
+            }
+
+            // Clear temporary data
+            customRankData.delete(userId);
+            return;
+        }
+
+        // Normal items এর জন্য
         const customIdParts = interaction.customId.split('_');
-        
-        // The custom ID format is: purchase_modal_600_token_bkash
-        // So parts will be: ['purchase', 'modal', '600', 'token', 'bkash']
-        const itemKey = `${customIdParts[2]}_${customIdParts[3]}`; // This creates '600_token'
-        const paymentMethod = customIdParts[4]; // 'bkash' or 'nagad'
+        const itemKey = `${customIdParts[2]}_${customIdParts[3]}`;
+        const paymentMethod = customIdParts[4];
         
         console.log(`🔍 Modal Parsed - Item Key: ${itemKey}, Payment Method: ${paymentMethod}`);
         
@@ -434,7 +897,7 @@ client.on('interactionCreate', async (interaction) => {
         // 🔥 AUTO-DELETE PREVIOUS EPHEMERAL MESSAGES
         await deleteUserEphemeralMessages(interaction.user.id, interaction.channelId);
 
-        // Send final confirmation to user (ephemeral - this will also auto-delete later)
+        // Send final confirmation to user
         const userEmbed = new EmbedBuilder()
             .setTitle('✅ Purchase Submitted Successfully!')
             .setColor(0x00FF00)
@@ -467,7 +930,7 @@ client.on('interactionCreate', async (interaction) => {
         // Store this ephemeral message for auto-deletion
         storeEphemeralMessage(interaction);
 
-        // ✅ 1. Send DM to user (ইউজারের টাইপ অনুযায়ী আলাদা মেসেজ)
+        // ✅ 1. Send DM to user
         try {
             let dmDescription = '';
             let dmTitle = '';
@@ -520,7 +983,7 @@ client.on('interactionCreate', async (interaction) => {
             console.log(`❌ Could not send DM to ${interaction.user.tag}:`, dmError.message);
         }
 
-        // ✅ 2. Send to PRIVATE CHANNEL (আপনার দেওয়া চ্যানেলে)
+        // ✅ 2. Send to PRIVATE CHANNEL
         const privateOrdersChannel = client.channels.cache.get(PRIVATE_ORDERS_CHANNEL_ID);
         if (privateOrdersChannel) {
             try {
@@ -571,11 +1034,7 @@ client.on('interactionCreate', async (interaction) => {
                 console.log(`✅ Order sent to private channel: ${PRIVATE_ORDERS_CHANNEL_ID} (Type: ${item.type})`);
             } catch (privateError) {
                 console.log(`❌ Could not send to private channel:`, privateError.message);
-                console.log(`💡 Please check:\n1. Channel ID: ${PRIVATE_ORDERS_CHANNEL_ID}\n2. Bot has permission to send messages\n3. Channel exists in the server`);
             }
-        } else {
-            console.log(`❌ Private channel not found! ID: ${PRIVATE_ORDERS_CHANNEL_ID}`);
-            console.log('💡 Please check the channel ID and make sure bot has access');
         }
     }
 });
@@ -596,9 +1055,8 @@ function storeEphemeralMessage(interaction) {
     
     const channelMessages = userChannels.get(channelId);
     
-    // Store message info (we'll track the latest interactions)
     if (channelMessages.length >= 5) {
-        channelMessages.shift(); // Remove oldest message
+        channelMessages.shift();
     }
     
     channelMessages.push({
@@ -611,13 +1069,12 @@ function storeEphemeralMessage(interaction) {
 async function deleteUserEphemeralMessages(userId, channelId) {
     try {
         if (userEphemeralMessages.has(userId)) {
-            const userChannels = userEphemeralMessages.get(userId);
+            const userChannels = userEphemervEphemeralMessages.get(userId);
             if (userChannels.has(channelId)) {
                 const channelMessages = userChannels.get(channelId);
                 
                 console.log(`🗑️ Deleting ${channelMessages.length} ephemeral messages for user ${userId} in channel ${channelId}`);
                 
-                // Clear the stored messages
                 userChannels.delete(channelId);
                 
                 if (userChannels.size === 0) {
@@ -650,7 +1107,20 @@ setInterval(() => {
             userEphemeralMessages.delete(userId);
         }
     }
-}, 10 * 60 * 1000); // 10 minutes
+}, 10 * 60 * 1000);
+
+// Auto-cleanup old custom rank data (every 30 minutes)
+setInterval(() => {
+    const now = Date.now();
+    const THIRTY_MINUTES = 30 * 60 * 1000;
+    
+    for (const [userId, data] of customRankData.entries()) {
+        if (now - data.timestamp > THIRTY_MINUTES) {
+            customRankData.delete(userId);
+            console.log(`🧹 Cleared old custom rank data for user: ${userId}`);
+        }
+    }
+}, 30 * 60 * 1000);
 
 // Error handling
 client.on('error', (error) => {
