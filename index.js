@@ -119,7 +119,8 @@ const availableColors = [
     { name: 'Orange', value: 'ORANGE', hex: '#FFA500', emoji: '🟠' },
     { name: 'Gold', value: 'GOLD', hex: '#FFD700', emoji: '⭐' },
     { name: 'Cyan', value: 'CYAN', hex: '#00FFFF', emoji: '💎' },
-    { name: 'Rainbow', value: 'RAINBOW', hex: 'GRADIENT', emoji: '🌈' }
+    { name: 'Rainbow', value: 'RAINBOW', hex: 'GRADIENT', emoji: '🌈' },
+    { name: 'Custom Color', value: 'CUSTOM_COLOR', hex: '', emoji: '🎨' }
 ];
 
 // ImgBB Images for different sections
@@ -143,7 +144,7 @@ client.once('ready', () => {
     console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
     console.log(`🤖 Bot ID: ${client.user.id}`);
     console.log(`🔒 All orders will be sent to private channel: ${PRIVATE_ORDERS_CHANNEL_ID}`);
-    console.log(`🎨 Custom Rank feature enabled with ${availableColors.length} colors`);
+    console.log(`🎨 Custom Rank feature enabled with custom color option`);
     
     // Check channel permissions
     checkChannelPermissions();
@@ -300,12 +301,12 @@ client.on('interactionCreate', async (interaction) => {
         if (item.requiresCustomForm) {
             console.log(`🎨 Custom Rank selected, showing custom form for ${interaction.user.tag}`);
             
-            // Step 1: Custom Prefix Input
-            const prefixModal = new ModalBuilder()
-                .setCustomId(`custom_rank_prefix_${paymentMethod}`)
-                .setTitle('🎨 Custom Rank Setup - Step 1/2');
+            // Custom Rank Setup Modal
+            const customRankModal = new ModalBuilder()
+                .setCustomId(`custom_rank_setup_${paymentMethod}`)
+                .setTitle('🎨 Custom Rank Setup');
 
-            // Prefix Input
+            // Custom Prefix Input
             const prefixInput = new TextInputBuilder()
                 .setCustomId('custom_prefix')
                 .setLabel('Your Custom Rank Prefix')
@@ -314,7 +315,7 @@ client.on('interactionCreate', async (interaction) => {
                 .setRequired(true)
                 .setMaxLength(20);
 
-            // Description
+            // Rank Description Input
             const descInput = new TextInputBuilder()
                 .setCustomId('rank_description')
                 .setLabel('Rank Description (Optional)')
@@ -326,9 +327,9 @@ client.on('interactionCreate', async (interaction) => {
             const firstActionRow = new ActionRowBuilder().addComponents(prefixInput);
             const secondActionRow = new ActionRowBuilder().addComponents(descInput);
 
-            prefixModal.addComponents(firstActionRow, secondActionRow);
+            customRankModal.addComponents(firstActionRow, secondActionRow);
 
-            await interaction.showModal(prefixModal);
+            await interaction.showModal(customRankModal);
             return;
         }
 
@@ -383,12 +384,12 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// Handle Custom Rank Prefix Modal Submission
+// Handle Custom Rank Setup Modal Submission
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isModalSubmit()) return;
 
-    if (interaction.customId.startsWith('custom_rank_prefix_')) {
-        console.log(`🎨 Custom Rank prefix modal submitted by ${interaction.user.tag}`);
+    if (interaction.customId.startsWith('custom_rank_setup_')) {
+        console.log(`🎨 Custom Rank setup modal submitted by ${interaction.user.tag}`);
         
         const paymentMethod = interaction.customId.split('_')[3]; // bkash or nagad
         const customPrefix = interaction.fields.getTextInputValue('custom_prefix');
@@ -405,14 +406,14 @@ client.on('interactionCreate', async (interaction) => {
         
         customRankData.set(interaction.user.id, tempData);
 
-        // Step 2: Color Selection
+        // Show color selection embed
         const embed = new EmbedBuilder()
-            .setTitle('🎨 Custom Rank Setup - Step 2/2')
+            .setTitle('🎨 Custom Rank - Choose Color')
             .setColor(0x9B59B6)
             .setThumbnail(shopImages.customRank)
             .addFields(
                 { 
-                    name: '✅ Prefix Set!', 
+                    name: '✅ Custom Prefix Set', 
                     value: `**Your Prefix:** ${customPrefix}`,
                     inline: false 
                 },
@@ -422,13 +423,13 @@ client.on('interactionCreate', async (interaction) => {
                     inline: false 
                 }
             )
-            .setDescription('**Now choose a color for your rank:**\nSelect a color from the dropdown below to customize your rank appearance.')
+            .setDescription('**Now choose a color for your rank:**\nSelect a color from the dropdown below. Choose "Custom Color" to enter your own hex color code.')
             .setFooter({ text: 'DrkSurvraze Custom Rank Builder' });
 
-        // Color Selection Dropdown
+        // Color Selection Dropdown with Custom Color option
         const colorOptions = availableColors.map(color => ({
             label: color.name,
-            description: `Select ${color.name.toLowerCase()} color`,
+            description: color.value === 'CUSTOM_COLOR' ? 'Enter your own color code' : `Select ${color.name.toLowerCase()} color`,
             value: color.value,
             emoji: color.emoji
         }));
@@ -468,7 +469,29 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
-        // Find color details
+        // Check if custom color selected
+        if (selectedColorValue === 'CUSTOM_COLOR') {
+            // Show custom color modal
+            const customColorModal = new ModalBuilder()
+                .setCustomId(`custom_color_input_${paymentMethod}`)
+                .setTitle('🎨 Enter Custom Color');
+
+            const colorInput = new TextInputBuilder()
+                .setCustomId('custom_hex_color')
+                .setLabel('Enter HEX Color Code')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Example: #FF5733, #33FF57, #3357FF')
+                .setRequired(true)
+                .setMaxLength(7);
+
+            const firstActionRow = new ActionRowBuilder().addComponents(colorInput);
+            customColorModal.addComponents(firstActionRow);
+
+            await interaction.showModal(customColorModal);
+            return;
+        }
+
+        // Regular color selected
         const selectedColor = availableColors.find(c => c.value === selectedColorValue);
         
         // Update stored data
@@ -477,60 +500,113 @@ client.on('interactionCreate', async (interaction) => {
         tempData.colorHex = selectedColor.hex;
         customRankData.set(userId, tempData);
 
-        const item = shopItems['custom_rank'];
-        const paymentName = paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
-        const paymentNumber = paymentMethod === 'bkash' ? item.bKash : item.nagad;
-        const paymentEmoji = paymentMethod === 'bkash' ? '💳' : '📱';
+        // Show payment instructions
+        await showCustomRankPaymentInstructions(interaction, tempData, selectedColor);
+    }
 
-        // Show final payment instructions
-        const embed = new EmbedBuilder()
-            .setTitle(`🎨 ${item.name} - Payment Instructions`)
-            .setColor(0x9B59B6)
-            .setThumbnail(shopImages.customRank)
-            .addFields(
-                { 
-                    name: '📦 Custom Rank Details', 
-                    value: `**Price:** ${item.price} BDT\n**Type:** Custom Rank Creation`,
-                    inline: false 
-                },
-                { 
-                    name: '🎨 Customization', 
-                    value: `**Prefix:** ${tempData.prefix}\n**Color:** ${selectedColor.name} ${selectedColor.emoji}`,
-                    inline: false 
-                },
-                { 
-                    name: '📝 Description', 
-                    value: tempData.description,
-                    inline: false 
-                },
-                { 
-                    name: `📱 ${paymentName} Number`, 
-                    value: `**${paymentNumber}**`, 
-                    inline: false 
-                }
-            )
-            .setDescription(`**How to Purchase:**\n1. Send **${item.price} BDT** to ${paymentName} number: **${paymentNumber}**\n2. Click the 'Complete Purchase' button below.\n3. Enter your Minecraft username and payment details.`)
-            .setImage(shopImages.paymentGuide)
-            .setFooter({ text: 'Make sure to use the Send Money option' });
+    // Handle Custom Color Modal Submission
+    if (interaction.isModalSubmit() && interaction.customId.startsWith('custom_color_input_')) {
+        console.log(`🎨 Custom color modal submitted by ${interaction.user.tag}`);
+        
+        const paymentMethod = interaction.customId.split('_')[3];
+        const customHexColor = interaction.fields.getTextInputValue('custom_hex_color').toUpperCase();
+        const userId = interaction.user.id;
+        
+        // Get stored data
+        const tempData = customRankData.get(userId);
+        if (!tempData) {
+            await interaction.reply({
+                content: '❌ Session expired. Please start over with !shop',
+                ephemeral: true
+            });
+            return;
+        }
 
-        // Complete Purchase Button
-        const purchaseButton = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`purchase_custom_rank_${paymentMethod}`)
-                .setLabel('Complete Purchase')
-                .setStyle(ButtonStyle.Success)
-                .setEmoji('🛒')
-        );
+        // Validate hex color
+        const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+        if (!hexRegex.test(customHexColor)) {
+            await interaction.reply({
+                content: '❌ Invalid HEX color code. Please use format like #FF5733 or #FFF',
+                ephemeral: true
+            });
+            return;
+        }
 
-        await interaction.update({
-            embeds: [embed],
-            components: [purchaseButton]
-        });
+        // Create custom color object
+        const customColor = {
+            name: 'Custom Color',
+            value: 'CUSTOM_COLOR',
+            hex: customHexColor,
+            emoji: '🎨'
+        };
+        
+        // Update stored data
+        tempData.color = customColor;
+        tempData.colorName = `Custom (${customHexColor})`;
+        tempData.colorHex = customHexColor;
+        customRankData.set(userId, tempData);
 
-        // Store ephemeral message info for auto-deletion
-        storeEphemeralMessage(interaction);
+        // Show payment instructions
+        await showCustomRankPaymentInstructions(interaction, tempData, customColor);
     }
 });
+
+// Function to show custom rank payment instructions
+async function showCustomRankPaymentInstructions(interaction, tempData, selectedColor) {
+    const item = shopItems['custom_rank'];
+    const paymentName = tempData.paymentMethod === 'bkash' ? 'bKash' : 'Nagad';
+    const paymentNumber = tempData.paymentMethod === 'bkash' ? item.bKash : item.nagad;
+    const paymentEmoji = tempData.paymentMethod === 'bkash' ? '💳' : '📱';
+
+    // Show final payment instructions
+    const embed = new EmbedBuilder()
+        .setTitle(`🎨 ${item.name} - Payment Instructions`)
+        .setColor(0x9B59B6)
+        .setThumbnail(shopImages.customRank)
+        .addFields(
+            { 
+                name: '📦 Custom Rank Details', 
+                value: `**Price:** ${item.price} BDT\n**Type:** Custom Rank Creation`,
+                inline: false 
+            },
+            { 
+                name: '🎨 Customization', 
+                value: `**Prefix:** ${tempData.prefix}\n**Color:** ${tempData.colorName} ${selectedColor.emoji}`,
+                inline: false 
+            },
+            { 
+                name: '📝 Description', 
+                value: tempData.description,
+                inline: false 
+            },
+            { 
+                name: `📱 ${paymentName} Number`, 
+                value: `**${paymentNumber}**`, 
+                inline: false 
+            }
+        )
+        .setDescription(`**How to Purchase:**\n1. Send **${item.price} BDT** to ${paymentName} number: **${paymentNumber}**\n2. Click the 'Complete Purchase' button below.\n3. Enter your Minecraft username and payment details.`)
+        .setImage(shopImages.paymentGuide)
+        .setFooter({ text: 'Make sure to use the Send Money option' });
+
+    // Complete Purchase Button
+    const purchaseButton = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`purchase_custom_rank_${tempData.paymentMethod}`)
+            .setLabel('Complete Purchase')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('🛒')
+    );
+
+    await interaction.reply({
+        embeds: [embed],
+        components: [purchaseButton],
+        ephemeral: true
+    });
+
+    // Store ephemeral message info for auto-deletion
+    storeEphemeralMessage(interaction);
+}
 
 // Handle Purchase Button Click - Step 3 (Modal Open)
 client.on('interactionCreate', async (interaction) => {
@@ -1069,7 +1145,7 @@ function storeEphemeralMessage(interaction) {
 async function deleteUserEphemeralMessages(userId, channelId) {
     try {
         if (userEphemeralMessages.has(userId)) {
-            const userChannels = userEphemervEphemeralMessages.get(userId);
+            const userChannels = userEphemeralMessages.get(userId);
             if (userChannels.has(channelId)) {
                 const channelMessages = userChannels.get(channelId);
                 
