@@ -159,12 +159,88 @@ const PRIVATE_ORDERS_CHANNEL_ID = '1443293560895049792'; // আপনার দ�
 const userEphemeralMessages = new Map();
 // Store custom rank data temporarily
 const customRankData = new Map();
+// Store orders in memory (in production use database)
+const orders = new Map();
+// Generate unique order IDs
+let orderCounter = 1000;
+
+// Order Status
+const OrderStatus = {
+    PENDING: 'pending',
+    APPROVED: 'approved',
+    REJECTED: 'rejected',
+    DISMISSED: 'dismissed'
+};
+
+// Function to generate unique order ID
+function generateOrderId() {
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    orderCounter++;
+    return `DS${timestamp}${random}`;
+}
+
+// Store order data
+function createOrder(data) {
+    const orderId = generateOrderId();
+    const order = {
+        id: orderId,
+        userId: data.userId,
+        userTag: data.userTag,
+        minecraftUsername: data.minecraftUsername,
+        itemName: data.itemName,
+        itemType: data.itemType,
+        price: data.price,
+        tokens: data.tokens || 0,
+        paymentMethod: data.paymentMethod,
+        paymentNumber: data.paymentNumber,
+        transactionId: data.transactionId,
+        status: OrderStatus.PENDING,
+        createdAt: new Date(),
+        customData: data.customData || null,
+        prefix: data.prefix || null,
+        color: data.color || null
+    };
+    
+    orders.set(orderId, order);
+    return order;
+}
+
+// Get order by ID
+function getOrder(orderId) {
+    return orders.get(orderId);
+}
+
+// Update order status
+function updateOrderStatus(orderId, status, reason = '') {
+    const order = orders.get(orderId);
+    if (order) {
+        order.status = status;
+        order.updatedAt = new Date();
+        if (reason) {
+            order.reason = reason;
+        }
+        return order;
+    }
+    return null;
+}
+
+// Get all orders
+function getAllOrders() {
+    return Array.from(orders.values());
+}
+
+// Get orders by status
+function getOrdersByStatus(status) {
+    return Array.from(orders.values()).filter(order => order.status === status);
+}
 
 client.once('ready', () => {
     console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
     console.log(`🤖 Bot ID: ${client.user.id}`);
     console.log(`🔒 All orders will be sent to private channel: ${PRIVATE_ORDERS_CHANNEL_ID}`);
     console.log(`🎨 Custom Rank feature enabled with custom color option`);
+    console.log(`📊 Order Management System Enabled`);
     
     // Check channel permissions
     checkChannelPermissions();
@@ -190,9 +266,26 @@ async function checkChannelPermissions() {
     }
 }
 
-// Create Shop Command
+// Send DM to user
+async function sendDM(userId, embed) {
+    try {
+        const user = await client.users.fetch(userId);
+        await user.send({ embeds: [embed] });
+        return true;
+    } catch (error) {
+        console.error(`❌ Could not send DM to user ${userId}:`, error.message);
+        return false;
+    }
+}
+
+// Order Management Commands
 client.on('messageCreate', async (message) => {
-    if (message.content === '!shop' && message.author.bot === false) {
+    if (message.author.bot) return;
+    
+    const content = message.content.trim();
+    
+    // Shop command
+    if (content === '!shop') {
         console.log(`🛒 Shop command received from ${message.author.tag}`);
         
         const embed = new EmbedBuilder()
@@ -235,6 +328,488 @@ client.on('messageCreate', async (message) => {
         await message.channel.send({
             embeds: [embed],
             components: [row]
+        });
+    }
+    
+    // Order management commands (Admin only)
+    if (content.startsWith('//')) {
+        const args = content.slice(2).trim().split(' ');
+        const command = args[0].toLowerCase();
+        
+        // Check if user has admin permissions
+        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+            return await message.reply({ content: '❌ You need administrator permissions to use this command.', ephemeral: true });
+        }
+        
+        switch(command) {
+            case 'approve':
+                if (args.length < 2) {
+                    return await message.reply({ content: '❌ Usage: `//approve <order-id>`', ephemeral: true });
+                }
+                
+                const approveOrderId = args[1];
+                const approveOrder = getOrder(approveOrderId);
+                
+                if (!approveOrder) {
+                    return await message.reply({ content: '❌ Order not found!', ephemeral: true });
+                }
+                
+                // Update order status
+                updateOrderStatus(approveOrderId, OrderStatus.APPROVED);
+                
+                // Send DM to user
+                const approveEmbed = new EmbedBuilder()
+                    .setTitle('✅ Order Approved - DrkSurvraze Shop')
+                    .setColor(0x00FF00)
+                    .setThumbnail(shopImages.success)
+                    .addFields(
+                        { name: '📦 Order ID', value: approveOrder.id, inline: true },
+                        { name: '🛒 Item', value: approveOrder.itemName, inline: true },
+                        { name: '💰 Price', value: `${approveOrder.price} BDT`, inline: true },
+                        { name: '👤 Minecraft', value: approveOrder.minecraftUsername, inline: true },
+                        { name: '⏰ Approved At', value: `<t:${Math.floor(Date.now()/1000)}:F>`, inline: true }
+                    )
+                    .setDescription('**✅ Your order has been approved and will be delivered soon!**\n\nPlease make sure you are online in our Minecraft server.')
+                    .setFooter({ text: 'DrkSurvraze Minecraft Community', iconURL: shopImages.logo })
+                    .setTimestamp();
+                
+                await sendDM(approveOrder.userId, approveEmbed);
+                
+                // Update private channel
+                const privateChannel = client.channels.cache.get(PRIVATE_ORDERS_CHANNEL_ID);
+                if (privateChannel) {
+                    const approveStatusEmbed = new EmbedBuilder()
+                        .setTitle(`✅ ORDER APPROVED - ${approveOrderId}`)
+                        .setColor(0x00FF00)
+                        .addFields(
+                            { name: '👤 Customer', value: approveOrder.userTag, inline: true },
+                            { name: '📦 Item', value: approveOrder.itemName, inline: true },
+                            { name: '👑 Status', value: '✅ APPROVED', inline: true },
+                            { name: '🕒 Approved By', value: message.author.tag, inline: true },
+                            { name: '⏰ Time', value: `<t:${Math.floor(Date.now()/1000)}:R>`, inline: true }
+                        )
+                        .setTimestamp();
+                    
+                    await privateChannel.send({ embeds: [approveStatusEmbed] });
+                }
+                
+                await message.reply({ content: `✅ Order **${approveOrderId}** has been approved! DM notification sent to user.` });
+                break;
+                
+            case 'reject':
+                if (args.length < 2) {
+                    return await message.reply({ content: '❌ Usage: `//reject <order-id> [reason]`', ephemeral: true });
+                }
+                
+                const rejectOrderId = args[1];
+                const rejectReason = args.slice(2).join(' ') || 'No reason provided';
+                const rejectOrder = getOrder(rejectOrderId);
+                
+                if (!rejectOrder) {
+                    return await message.reply({ content: '❌ Order not found!', ephemeral: true });
+                }
+                
+                // Update order status
+                updateOrderStatus(rejectOrderId, OrderStatus.REJECTED, rejectReason);
+                
+                // Send DM to user
+                const rejectEmbed = new EmbedBuilder()
+                    .setTitle('❌ Order Rejected - DrkSurvraze Shop')
+                    .setColor(0xFF0000)
+                    .setThumbnail(shopImages.logo)
+                    .addFields(
+                        { name: '📦 Order ID', value: rejectOrder.id, inline: true },
+                        { name: '🛒 Item', value: rejectOrder.itemName, inline: true },
+                        { name: '💰 Price', value: `${rejectOrder.price} BDT`, inline: true },
+                        { name: '📝 Reason', value: rejectReason, inline: false }
+                    )
+                    .setDescription('**❌ Your order has been rejected.**\n\nIf you think this is a mistake, please contact our support team.')
+                    .setFooter({ text: 'DrkSurvraze Minecraft Community', iconURL: shopImages.logo })
+                    .setTimestamp();
+                
+                await sendDM(rejectOrder.userId, rejectEmbed);
+                
+                // Update private channel
+                if (privateChannel) {
+                    const rejectStatusEmbed = new EmbedBuilder()
+                        .setTitle(`❌ ORDER REJECTED - ${rejectOrderId}`)
+                        .setColor(0xFF0000)
+                        .addFields(
+                            { name: '👤 Customer', value: rejectOrder.userTag, inline: true },
+                            { name: '📦 Item', value: rejectOrder.itemName, inline: true },
+                            { name: '❌ Status', value: 'REJECTED', inline: true },
+                            { name: '📝 Reason', value: rejectReason, inline: false },
+                            { name: '🕒 Rejected By', value: message.author.tag, inline: true }
+                        )
+                        .setTimestamp();
+                    
+                    await privateChannel.send({ embeds: [rejectStatusEmbed] });
+                }
+                
+                await message.reply({ content: `❌ Order **${rejectOrderId}** has been rejected! DM notification sent to user.` });
+                break;
+                
+            case 'dismiss':
+                if (args.length < 2) {
+                    return await message.reply({ content: '❌ Usage: `//dismiss <order-id>`', ephemeral: true });
+                }
+                
+                const dismissOrderId = args[1];
+                const dismissOrder = getOrder(dismissOrderId);
+                
+                if (!dismissOrder) {
+                    return await message.reply({ content: '❌ Order not found!', ephemeral: true });
+                }
+                
+                // Update order status (NO DM notification for dismiss)
+                updateOrderStatus(dismissOrderId, OrderStatus.DISMISSED);
+                
+                // Update private channel only
+                if (privateChannel) {
+                    const dismissStatusEmbed = new EmbedBuilder()
+                        .setTitle(`🗑️ ORDER DISMISSED - ${dismissOrderId}`)
+                        .setColor(0x808080)
+                        .addFields(
+                            { name: '👤 Customer', value: dismissOrder.userTag, inline: true },
+                            { name: '📦 Item', value: dismissOrder.itemName, inline: true },
+                            { name: '🗑️ Status', value: 'DISMISSED', inline: true },
+                            { name: '🕒 Dismissed By', value: message.author.tag, inline: true },
+                            { name: '📝 Note', value: 'No notification sent to user', inline: false }
+                        )
+                        .setTimestamp();
+                    
+                    await privateChannel.send({ embeds: [dismissStatusEmbed] });
+                }
+                
+                await message.reply({ content: `🗑️ Order **${dismissOrderId}** has been dismissed! No DM sent to user.` });
+                break;
+                
+            case 'orders':
+                const statusFilter = args[1]?.toLowerCase();
+                let orderList = getAllOrders();
+                
+                if (statusFilter) {
+                    orderList = orderList.filter(order => order.status === statusFilter);
+                }
+                
+                if (orderList.length === 0) {
+                    return await message.reply({ 
+                        content: `📭 No orders found${statusFilter ? ` with status "${statusFilter}"` : ''}.`,
+                        ephemeral: true 
+                    });
+                }
+                
+                const ordersEmbed = new EmbedBuilder()
+                    .setTitle(`📊 Order Management - DrkSurvraze Shop`)
+                    .setColor(0x3498DB)
+                    .setDescription(`**Total Orders:** ${orderList.length}${statusFilter ? ` (Filtered: ${statusFilter})` : ''}\n\n` +
+                        orderList.slice(0, 15).map(order => {
+                            const statusEmoji = order.status === 'approved' ? '✅' : 
+                                              order.status === 'rejected' ? '❌' : 
+                                              order.status === 'dismissed' ? '🗑️' : '⏳';
+                            return `${statusEmoji} **${order.id}** - ${order.itemName} (${order.price}৳)\n👤 ${order.minecraftUsername} | 📅 <t:${Math.floor(order.createdAt/1000)}:R>`;
+                        }).join('\n\n'))
+                    .addFields(
+                        { name: '📋 Available Commands', value: '`//approve <id>` - Approve order\n`//reject <id> [reason]` - Reject order\n`//dismiss <id>` - Dismiss order\n`//orders [status]` - List orders\n`//order <id>` - View order details', inline: false }
+                    )
+                    .setFooter({ text: `Showing ${Math.min(orderList.length, 15)} of ${orderList.length} orders` })
+                    .setTimestamp();
+                
+                await message.reply({ embeds: [ordersEmbed], ephemeral: true });
+                break;
+                
+            case 'order':
+                if (args.length < 2) {
+                    return await message.reply({ content: '❌ Usage: `//order <order-id>`', ephemeral: true });
+                }
+                
+                const viewOrderId = args[1];
+                const viewOrder = getOrder(viewOrderId);
+                
+                if (!viewOrder) {
+                    return await message.reply({ content: '❌ Order not found!', ephemeral: true });
+                }
+                
+                const statusColor = viewOrder.status === 'approved' ? 0x00FF00 : 
+                                   viewOrder.status === 'rejected' ? 0xFF0000 : 
+                                   viewOrder.status === 'dismissed' ? 0x808080 : 0xFFA500;
+                
+                const statusText = viewOrder.status === 'approved' ? '✅ APPROVED' : 
+                                  viewOrder.status === 'rejected' ? '❌ REJECTED' : 
+                                  viewOrder.status === 'dismissed' ? '🗑️ DISMISSED' : '⏳ PENDING';
+                
+                const orderEmbed = new EmbedBuilder()
+                    .setTitle(`📄 Order Details - ${viewOrderId}`)
+                    .setColor(statusColor)
+                    .addFields(
+                        { name: '👤 Customer', value: `${viewOrder.userTag}\nID: ${viewOrder.userId}`, inline: true },
+                        { name: '🎮 Minecraft', value: viewOrder.minecraftUsername, inline: true },
+                        { name: '📊 Status', value: statusText, inline: true },
+                        { name: '📦 Item', value: viewOrder.itemName, inline: true },
+                        { name: '💰 Price', value: `${viewOrder.price} BDT`, inline: true },
+                        { name: '🪙 Tokens', value: viewOrder.tokens > 0 ? `${viewOrder.tokens}` : 'N/A', inline: true },
+                        { name: '💳 Payment', value: `${viewOrder.paymentMethod}\n${viewOrder.paymentNumber}`, inline: true },
+                        { name: '📋 Transaction ID', value: viewOrder.transactionId, inline: true },
+                        { name: '📅 Created', value: `<t:${Math.floor(viewOrder.createdAt/1000)}:F>`, inline: true }
+                    );
+                
+                if (viewOrder.prefix || viewOrder.color) {
+                    orderEmbed.addFields({ name: '🎨 Custom Rank', value: `Prefix: ${viewOrder.prefix || 'N/A'}\nColor: ${viewOrder.color || 'N/A'}`, inline: false });
+                }
+                
+                if (viewOrder.reason) {
+                    orderEmbed.addFields({ name: '📝 Reason', value: viewOrder.reason, inline: false });
+                }
+                
+                orderEmbed.setFooter({ text: 'DrkSurvraze Shop Order Management' }).setTimestamp();
+                
+                // Add action buttons
+                const actionRow = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`approve_${viewOrderId}`)
+                            .setLabel('Approve')
+                            .setStyle(ButtonStyle.Success)
+                            .setEmoji('✅'),
+                        new ButtonBuilder()
+                            .setCustomId(`reject_${viewOrderId}`)
+                            .setLabel('Reject')
+                            .setStyle(ButtonStyle.Danger)
+                            .setEmoji('❌'),
+                        new ButtonBuilder()
+                            .setCustomId(`dismiss_${viewOrderId}`)
+                            .setLabel('Dismiss')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setEmoji('🗑️')
+                    );
+                
+                await message.reply({ 
+                    embeds: [orderEmbed], 
+                    components: [actionRow],
+                    ephemeral: true 
+                });
+                break;
+        }
+    }
+});
+
+// Handle action buttons for order management
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isButton()) return;
+    
+    if (interaction.customId.startsWith('approve_') || 
+        interaction.customId.startsWith('reject_') || 
+        interaction.customId.startsWith('dismiss_')) {
+        
+        // Check if user has admin permissions
+        if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+            return await interaction.reply({ 
+                content: '❌ You need administrator permissions to manage orders.', 
+                ephemeral: true 
+            });
+        }
+        
+        const [action, orderId] = interaction.customId.split('_');
+        const order = getOrder(orderId);
+        
+        if (!order) {
+            return await interaction.reply({ 
+                content: '❌ Order not found!', 
+                ephemeral: true 
+            });
+        }
+        
+        switch(action) {
+            case 'approve':
+                // Show modal for approval (optional note)
+                const approveModal = new ModalBuilder()
+                    .setCustomId(`approve_modal_${orderId}`)
+                    .setTitle('Approve Order');
+                
+                const noteInput = new TextInputBuilder()
+                    .setCustomId('approve_note')
+                    .setLabel('Approval Note (Optional)')
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setRequired(false)
+                    .setMaxLength(500);
+                
+                const noteRow = new ActionRowBuilder().addComponents(noteInput);
+                approveModal.addComponents(noteRow);
+                
+                await interaction.showModal(approveModal);
+                break;
+                
+            case 'reject':
+                // Show modal for rejection reason
+                const rejectModal = new ModalBuilder()
+                    .setCustomId(`reject_modal_${orderId}`)
+                    .setTitle('Reject Order');
+                
+                const reasonInput = new TextInputBuilder()
+                    .setCustomId('reject_reason')
+                    .setLabel('Rejection Reason')
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setPlaceholder('Enter the reason for rejection...')
+                    .setRequired(true)
+                    .setMaxLength(500);
+                
+                const reasonRow = new ActionRowBuilder().addComponents(reasonInput);
+                rejectModal.addComponents(reasonRow);
+                
+                await interaction.showModal(rejectModal);
+                break;
+                
+            case 'dismiss':
+                // Dismiss without reason
+                updateOrderStatus(orderId, OrderStatus.DISMISSED);
+                
+                // Update private channel
+                const privateChannel = client.channels.cache.get(PRIVATE_ORDERS_CHANNEL_ID);
+                if (privateChannel) {
+                    const dismissEmbed = new EmbedBuilder()
+                        .setTitle(`🗑️ ORDER DISMISSED - ${orderId}`)
+                        .setColor(0x808080)
+                        .addFields(
+                            { name: '👤 Customer', value: order.userTag, inline: true },
+                            { name: '📦 Item', value: order.itemName, inline: true },
+                            { name: '🗑️ Status', value: 'DISMISSED', inline: true },
+                            { name: '🕒 Dismissed By', value: interaction.user.tag, inline: true }
+                        )
+                        .setTimestamp();
+                    
+                    await privateChannel.send({ embeds: [dismissEmbed] });
+                }
+                
+                await interaction.reply({ 
+                    content: `✅ Order **${orderId}** has been dismissed! No DM sent to user.`,
+                    ephemeral: true 
+                });
+                break;
+        }
+    }
+});
+
+// Handle modal submissions for order actions
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isModalSubmit()) return;
+    
+    if (interaction.customId.startsWith('approve_modal_')) {
+        const orderId = interaction.customId.split('_')[2];
+        const note = interaction.fields.getTextInputValue('approve_note');
+        const order = getOrder(orderId);
+        
+        if (!order) {
+            return await interaction.reply({ 
+                content: '❌ Order not found!', 
+                ephemeral: true 
+            });
+        }
+        
+        // Update order status
+        updateOrderStatus(orderId, OrderStatus.APPROVED);
+        
+        // Send DM to user
+        const approveEmbed = new EmbedBuilder()
+            .setTitle('✅ Order Approved - DrkSurvraze Shop')
+            .setColor(0x00FF00)
+            .setThumbnail(shopImages.success)
+            .addFields(
+                { name: '📦 Order ID', value: order.id, inline: true },
+                { name: '🛒 Item', value: order.itemName, inline: true },
+                { name: '💰 Price', value: `${order.price} BDT`, inline: true },
+                { name: '👤 Minecraft', value: order.minecraftUsername, inline: true }
+            )
+            .setDescription('**✅ Your order has been approved and will be delivered soon!**\n\nPlease make sure you are online in our Minecraft server.')
+            .setFooter({ text: 'DrkSurvraze Minecraft Community', iconURL: shopImages.logo })
+            .setTimestamp();
+        
+        if (note) {
+            approveEmbed.addFields({ name: '📝 Admin Note', value: note, inline: false });
+        }
+        
+        await sendDM(order.userId, approveEmbed);
+        
+        // Update private channel
+        const privateChannel = client.channels.cache.get(PRIVATE_ORDERS_CHANNEL_ID);
+        if (privateChannel) {
+            const approveStatusEmbed = new EmbedBuilder()
+                .setTitle(`✅ ORDER APPROVED - ${orderId}`)
+                .setColor(0x00FF00)
+                .addFields(
+                    { name: '👤 Customer', value: order.userTag, inline: true },
+                    { name: '📦 Item', value: order.itemName, inline: true },
+                    { name: '👑 Status', value: '✅ APPROVED', inline: true },
+                    { name: '🕒 Approved By', value: interaction.user.tag, inline: true },
+                    { name: '⏰ Time', value: `<t:${Math.floor(Date.now()/1000)}:R>`, inline: true }
+                )
+                .setTimestamp();
+            
+            if (note) {
+                approveStatusEmbed.addFields({ name: '📝 Note', value: note, inline: false });
+            }
+            
+            await privateChannel.send({ embeds: [approveStatusEmbed] });
+        }
+        
+        await interaction.reply({ 
+            content: `✅ Order **${orderId}** has been approved! DM notification sent to user.`,
+            ephemeral: true 
+        });
+    }
+    
+    if (interaction.customId.startsWith('reject_modal_')) {
+        const orderId = interaction.customId.split('_')[2];
+        const reason = interaction.fields.getTextInputValue('reject_reason');
+        const order = getOrder(orderId);
+        
+        if (!order) {
+            return await interaction.reply({ 
+                content: '❌ Order not found!', 
+                ephemeral: true 
+            });
+        }
+        
+        // Update order status
+        updateOrderStatus(orderId, OrderStatus.REJECTED, reason);
+        
+        // Send DM to user
+        const rejectEmbed = new EmbedBuilder()
+            .setTitle('❌ Order Rejected - DrkSurvraze Shop')
+            .setColor(0xFF0000)
+            .setThumbnail(shopImages.logo)
+            .addFields(
+                { name: '📦 Order ID', value: order.id, inline: true },
+                { name: '🛒 Item', value: order.itemName, inline: true },
+                { name: '💰 Price', value: `${order.price} BDT`, inline: true },
+                { name: '📝 Reason', value: reason, inline: false }
+            )
+            .setDescription('**❌ Your order has been rejected.**\n\nIf you think this is a mistake, please contact our support team.')
+            .setFooter({ text: 'DrkSurvraze Minecraft Community', iconURL: shopImages.logo })
+            .setTimestamp();
+        
+        await sendDM(order.userId, rejectEmbed);
+        
+        // Update private channel
+        const privateChannel = client.channels.cache.get(PRIVATE_ORDERS_CHANNEL_ID);
+        if (privateChannel) {
+            const rejectStatusEmbed = new EmbedBuilder()
+                .setTitle(`❌ ORDER REJECTED - ${orderId}`)
+                .setColor(0xFF0000)
+                .addFields(
+                    { name: '👤 Customer', value: order.userTag, inline: true },
+                    { name: '📦 Item', value: order.itemName, inline: true },
+                    { name: '❌ Status', value: 'REJECTED', inline: true },
+                    { name: '📝 Reason', value: reason, inline: false },
+                    { name: '🕒 Rejected By', value: interaction.user.tag, inline: true }
+                )
+                .setTimestamp();
+            
+            await privateChannel.send({ embeds: [rejectStatusEmbed] });
+        }
+        
+        await interaction.reply({ 
+            content: `❌ Order **${orderId}** has been rejected! DM notification sent to user.`,
+            ephemeral: true 
         });
     }
 });
@@ -820,15 +1395,37 @@ client.on('interactionCreate', async (interaction) => {
 
             console.log(`✅ Custom Rank order received: ${tempData.prefix} by ${minecraftUsername}`);
 
+            // Create order in database
+            const order = createOrder({
+                userId: interaction.user.id,
+                userTag: interaction.user.tag,
+                minecraftUsername: minecraftUsername,
+                itemName: item.name,
+                itemType: item.type,
+                price: item.price,
+                paymentMethod: paymentName,
+                paymentNumber: paymentNumber,
+                transactionId: transactionId,
+                prefix: tempData.prefix,
+                color: tempData.colorName
+            });
+
+            console.log(`📝 Order created with ID: ${order.id}`);
+
             // 🔥 AUTO-DELETE PREVIOUS EPHEMERAL MESSAGES
             await deleteUserEphemeralMessages(interaction.user.id, interaction.channelId);
 
-            // Send final confirmation to user
+            // Send final confirmation to user with ORDER ID
             const userEmbed = new EmbedBuilder()
                 .setTitle('✅ Custom Rank Purchase Submitted!')
                 .setColor(0x9B59B6)
                 .setThumbnail(shopImages.success)
                 .addFields(
+                    { 
+                        name: '📋 Order ID', 
+                        value: `**${order.id}**\n*(Copy this ID for tracking)*`,
+                        inline: false 
+                    },
                     { 
                         name: '🎨 Custom Rank Details', 
                         value: `**Price:** ${item.price} BDT\n**Type:** Custom Rank Creation`,
@@ -845,7 +1442,7 @@ client.on('interactionCreate', async (interaction) => {
                         inline: false 
                     }
                 )
-                .setDescription('**✅ Your custom rank has been ordered!**\n\nWe will verify your payment and create your custom rank within 1-2 hours.\n\n**Check your DM for confirmation!**')
+                .setDescription(`**✅ Your custom rank has been ordered!**\n\nWe will verify your payment and create your custom rank within 1-2 hours.\n\n**🔔 Order ID: ${order.id}**\n*Copy this ID for tracking*\n\n**Check your DM for confirmation!**`)
                 .setFooter({ 
                     text: 'DrkSurvraze Minecraft Community', 
                     iconURL: shopImages.logo 
@@ -867,6 +1464,11 @@ client.on('interactionCreate', async (interaction) => {
                     .setThumbnail(shopImages.customRank)
                     .addFields(
                         { 
+                            name: '📋 Order ID', 
+                            value: `**${order.id}**`,
+                            inline: false 
+                        },
+                        { 
                             name: '🎨 Your Custom Rank', 
                             value: `**Prefix:** ${tempData.prefix}\n**Color:** ${tempData.colorName} ${tempData.colorEmoji}`,
                             inline: false 
@@ -887,7 +1489,7 @@ client.on('interactionCreate', async (interaction) => {
                             inline: false 
                         }
                     )
-                    .setDescription(`**✅ Your custom rank order has been received!**\n\nWe are verifying your payment and will create your custom rank within 1-2 hours.\n\n**Custom Rank Features:**\n• Unique prefix: ${tempData.prefix}\n• ${tempData.colorName} colored name\n• Special rank permissions\n\n**Please make sure you are online in our Minecraft server for rank setup.**\n\n**Thank you for choosing DrkSurvraze!**`)
+                    .setDescription(`**✅ Your custom rank order has been received!**\n\nWe are verifying your payment and will create your custom rank within 1-2 hours.\n\n**Order ID:** \`${order.id}\`\n**Status:** ⏳ Pending\n\n**Custom Rank Features:**\n• Unique prefix: ${tempData.prefix}\n• ${tempData.colorName} colored name\n• Special rank permissions\n\n**Please make sure you are online in our Minecraft server for rank setup.**\n\n**Thank you for choosing DrkSurvraze!**`)
                     .setFooter({ 
                         text: 'DrkSurvraze Minecraft Community', 
                         iconURL: shopImages.logo 
@@ -906,10 +1508,15 @@ client.on('interactionCreate', async (interaction) => {
             if (privateOrdersChannel) {
                 try {
                     const privateEmbed = new EmbedBuilder()
-                        .setTitle(`🎨 CUSTOM RANK ORDER - DrkSurvraze Shop`)
+                        .setTitle(`🎨 CUSTOM RANK ORDER - ${order.id}`)
                         .setColor(0x9B59B6)
                         .setThumbnail(shopImages.customRank)
                         .addFields(
+                            { 
+                                name: '**📋 ORDER INFORMATION**', 
+                                value: `**Order ID:** ${order.id}\n**Status:** ⏳ PENDING\n**Type:** CUSTOM RANK`, 
+                                inline: false 
+                            },
                             { 
                                 name: '**👤 CUSTOMER INFORMATION**', 
                                 value: `**Discord User:** ${interaction.user.tag}\n**Discord ID:** ${interaction.user.id}\n**Minecraft Username:** ${minecraftUsername}`, 
@@ -917,7 +1524,7 @@ client.on('interactionCreate', async (interaction) => {
                             },
                             { 
                                 name: '**🎨 CUSTOM RANK DETAILS**', 
-                                value: `**Custom Prefix:** ${tempData.prefix}\n**Color:** ${tempData.colorName} (${tempData.colorHex})\n**Price:** ${item.price} BDT\n**Type:** CUSTOM RANK`, 
+                                value: `**Custom Prefix:** ${tempData.prefix}\n**Color:** ${tempData.colorName} (${tempData.colorHex})\n**Price:** ${item.price} BDT`, 
                                 inline: false 
                             },
                             { 
@@ -931,11 +1538,12 @@ client.on('interactionCreate', async (interaction) => {
                                 inline: false 
                             }
                         )
+                        .setDescription(`**📋 Order ID:** \`${order.id}\`\n*Copy this ID for management*\n\n**Available Commands:**\n\`//approve ${order.id}\` - Approve this order\n\`//reject ${order.id} [reason]\` - Reject with reason\n\`//dismiss ${order.id}\` - Dismiss without notification\n\`//order ${order.id}\` - View details`)
                         .setFooter({ text: 'DrkSurvraze Shop - Custom Rank Order' })
                         .setTimestamp();
 
                     await privateOrdersChannel.send({ 
-                        content: `@everyone\n📢 **🚨 🎨 NEW CUSTOM RANK ORDER RECEIVED! 🚨**`,
+                        content: `@everyone\n📢 **🚨 🎨 NEW CUSTOM RANK ORDER RECEIVED! 🚨**\n**Order ID:** \`${order.id}\``,
                         embeds: [privateEmbed] 
                     });
                     console.log(`✅ Custom Rank order sent to private channel: ${PRIVATE_ORDERS_CHANNEL_ID}`);
@@ -975,15 +1583,36 @@ client.on('interactionCreate', async (interaction) => {
 
         console.log(`✅ Order received: ${item.name} by ${minecraftUsername}`);
 
+        // Create order in database
+        const order = createOrder({
+            userId: interaction.user.id,
+            userTag: interaction.user.tag,
+            minecraftUsername: minecraftUsername,
+            itemName: item.name,
+            itemType: item.type,
+            price: item.price,
+            tokens: item.tokens,
+            paymentMethod: paymentName,
+            paymentNumber: paymentNumber,
+            transactionId: transactionId
+        });
+
+        console.log(`📝 Order created with ID: ${order.id}`);
+
         // 🔥 AUTO-DELETE PREVIOUS EPHEMERAL MESSAGES
         await deleteUserEphemeralMessages(interaction.user.id, interaction.channelId);
 
-        // Send final confirmation to user
+        // Send final confirmation to user with ORDER ID
         const userEmbed = new EmbedBuilder()
             .setTitle('✅ Purchase Submitted Successfully!')
             .setColor(0x00FF00)
             .setThumbnail(shopImages.success)
             .addFields(
+                { 
+                    name: '📋 Order ID', 
+                    value: `**${order.id}**\n*(Copy this ID for tracking)*`,
+                    inline: false 
+                },
                 { 
                     name: '📦 Order Details', 
                     value: item.tokens > 0 
@@ -997,7 +1626,7 @@ client.on('interactionCreate', async (interaction) => {
                     inline: false 
                 }
             )
-            .setDescription('**✅ Your order has been processed!**\n\nWe will verify your payment and deliver your item within 1-2 hours.\n\n**Check your DM for confirmation!**')
+            .setDescription(`**✅ Your order has been processed!**\n\nWe will verify your payment and deliver your item within 1-2 hours.\n\n**🔔 Order ID: ${order.id}**\n*Copy this ID for tracking*\n\n**Check your DM for confirmation!**`)
             .setFooter({ 
                 text: 'DrkSurvraze Minecraft Community', 
                 iconURL: shopImages.logo 
@@ -1018,13 +1647,13 @@ client.on('interactionCreate', async (interaction) => {
             
             if (item.type === 'token') {
                 dmTitle = '🎮 Token Purchase Confirmed - DrkSurvraze';
-                dmDescription = `**✅ Your ${item.tokens} Tokens purchase has been received!**\n\nWe are verifying your payment and will add the tokens to your account within 1-2 hours.\n\n**Please make sure you are online in our Minecraft server for token delivery.**\n\n**Thank you for shopping with DrkSurvraze!**`;
+                dmDescription = `**✅ Your ${item.tokens} Tokens purchase has been received!**\n\nWe are verifying your payment and will add the tokens to your account within 1-2 hours.\n\n**Order ID:** \`${order.id}\`\n**Status:** ⏳ Pending\n\n**Please make sure you are online in our Minecraft server for token delivery.**\n\n**Thank you for shopping with DrkSurvraze!**`;
             } else if (item.type === 'rank') {
                 dmTitle = '👑 Rank Purchase Confirmed - DrkSurvraze';
-                dmDescription = `**✅ Your ${item.name} purchase has been received!**\n\nWe are verifying your payment and will upgrade your rank within 1-2 hours.\n\n**Please make sure you are online in our Minecraft server for rank upgrade.**\n\n**Thank you for choosing DrkSurvraze!**`;
+                dmDescription = `**✅ Your ${item.name} purchase has been received!**\n\nWe are verifying your payment and will upgrade your rank within 1-2 hours.\n\n**Order ID:** \`${order.id}\`\n**Status:** ⏳ Pending\n\n**Please make sure you are online in our Minecraft server for rank upgrade.**\n\n**Thank you for choosing DrkSurvraze!**`;
             } else {
                 dmTitle = '🛒 Order Confirmed - DrkSurvraze Shop';
-                dmDescription = `**✅ Your order has been received!**\n\nWe are verifying your payment and will deliver your item within 1-2 hours.\n\n**Thank you for shopping with DrkSurvraze!**`;
+                dmDescription = `**✅ Your order has been received!**\n\nWe are verifying your payment and will deliver your item within 1-2 hours.\n\n**Order ID:** \`${order.id}\`\n**Status:** ⏳ Pending\n\n**Thank you for shopping with DrkSurvraze!**`;
             }
 
             const userDMEmbed = new EmbedBuilder()
@@ -1032,6 +1661,11 @@ client.on('interactionCreate', async (interaction) => {
                 .setColor(0x00FF00)
                 .setThumbnail(shopImages.success)
                 .addFields(
+                    { 
+                        name: '📋 Order ID', 
+                        value: `**${order.id}**`,
+                        inline: false 
+                    },
                     { 
                         name: '📦 Your Order', 
                         value: item.tokens > 0 
@@ -1069,19 +1703,33 @@ client.on('interactionCreate', async (interaction) => {
         if (privateOrdersChannel) {
             try {
                 let orderType = '';
+                let orderEmoji = '';
+                let color = 0x00FF00;
+                
                 if (item.type === 'token') {
                     orderType = '🪙 TOKEN ORDER';
+                    orderEmoji = '🪙';
+                    color = 0x3498DB;
                 } else if (item.type === 'rank') {
                     orderType = '👑 RANK ORDER';
+                    orderEmoji = '👑';
+                    color = 0xF1C40F;
                 } else {
                     orderType = '🛒 GENERAL ORDER';
+                    orderEmoji = '🛒';
+                    color = 0x00FF00;
                 }
 
                 const privateEmbed = new EmbedBuilder()
-                    .setTitle(`🛒 ${orderType} - DrkSurvraze Shop`)
-                    .setColor(item.type === 'token' ? 0x3498DB : item.type === 'rank' ? 0xF1C40F : 0x00FF00)
+                    .setTitle(`${orderEmoji} ${orderType} - ${order.id}`)
+                    .setColor(color)
                     .setThumbnail(item.image)
                     .addFields(
+                        { 
+                            name: '**📋 ORDER INFORMATION**', 
+                            value: `**Order ID:** ${order.id}\n**Status:** ⏳ PENDING\n**Type:** ${item.type.toUpperCase()}`, 
+                            inline: false 
+                        },
                         { 
                             name: '**👤 CUSTOMER INFORMATION**', 
                             value: `**Discord User:** ${interaction.user.tag}\n**Discord ID:** ${interaction.user.id}\n**Minecraft Username:** ${minecraftUsername}`, 
@@ -1090,8 +1738,8 @@ client.on('interactionCreate', async (interaction) => {
                         { 
                             name: '**📦 ORDER INFORMATION**', 
                             value: item.tokens > 0 
-                                ? `**Item:** ${item.name}\n**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT\n**Type:** ${item.type.toUpperCase()}` 
-                                : `**Item:** ${item.name}\n**Price:** ${item.price} BDT\n**Type:** ${item.type.toUpperCase()}`, 
+                                ? `**Item:** ${item.name}\n**Tokens:** ${item.tokens}\n**Price:** ${item.price} BDT` 
+                                : `**Item:** ${item.name}\n**Price:** ${item.price} BDT`, 
                             inline: false 
                         },
                         { 
@@ -1105,14 +1753,15 @@ client.on('interactionCreate', async (interaction) => {
                             inline: false 
                         }
                     )
+                    .setDescription(`**📋 Order ID:** \`${order.id}\`\n*Copy this ID for management*\n\n**Available Commands:**\n\`//approve ${order.id}\` - Approve this order\n\`//reject ${order.id} [reason]\` - Reject with reason\n\`//dismiss ${order.id}\` - Dismiss without notification\n\`//order ${order.id}\` - View details`)
                     .setFooter({ text: 'DrkSurvraze Shop - Order Management' })
                     .setTimestamp();
 
                 await privateOrdersChannel.send({ 
-                    content: `@everyone\n📢 **🚨 NEW ${orderType} RECEIVED! 🚨**`,
+                    content: `@everyone\n📢 **🚨 NEW ${orderType} RECEIVED! 🚨**\n**Order ID:** \`${order.id}\``,
                     embeds: [privateEmbed] 
                 });
-                console.log(`✅ Order sent to private channel: ${PRIVATE_ORDERS_CHANNEL_ID} (Type: ${item.type})`);
+                console.log(`✅ Order sent to private channel: ${PRIVATE_ORDERS_CHANNEL_ID} (Type: ${item.type}, ID: ${order.id})`);
             } catch (privateError) {
                 console.log(`❌ Could not send to private channel:`, privateError.message);
             }
@@ -1202,6 +1851,22 @@ setInterval(() => {
         }
     }
 }, 30 * 60 * 1000);
+
+// Auto-cleanup old orders (keep last 1000 orders)
+setInterval(() => {
+    const allOrders = getAllOrders();
+    if (allOrders.length > 1000) {
+        // Sort by date (oldest first) and remove oldest orders
+        allOrders.sort((a, b) => a.createdAt - b.createdAt);
+        const ordersToRemove = allOrders.slice(0, allOrders.length - 1000);
+        
+        ordersToRemove.forEach(order => {
+            orders.delete(order.id);
+        });
+        
+        console.log(`🧹 Cleared ${ordersToRemove.length} old orders, keeping latest 1000`);
+    }
+}, 60 * 60 * 1000); // Every hour
 
 // Error handling
 client.on('error', (error) => {
