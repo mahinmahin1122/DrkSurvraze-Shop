@@ -54,6 +54,16 @@ const shopItems = {
         image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
         type: 'token'
     },
+    '9600_token': {
+        name: '9600 Token',
+        price: 800,
+        tokens: 9600,
+        description: '6000 Token package for your gameplay',
+        bKash: '01980583573',
+        nagad: '01980583573',
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+        type: 'token'
+    },
     '12000_token': {
         name: '12000 Token',
         price: 1000,
@@ -201,6 +211,7 @@ client.on('messageCreate', async (message) => {
                 { label: '1200 Token', description: 'Price: 100 BDT', value: '1200_token' },
                 { label: '3000 Token', description: 'Price: 250 BDT', value: '3000_token' },
                 { label: '6000 Token', description: 'Price: 500 BDT', value: '6000_token' },
+                { label: '9600 Token', description: 'Price: 800 BDT', value: '9600_token' },
                 { label: '12000 Token', description: 'Price: 1000 BDT', value: '12000_token' },
                 { label: 'VIP RANK', description: 'Price: 125 BDT', value: 'vip_rank' },
                 { label: 'MVP RANK', description: 'Price: 210 BDT', value: 'mvp_rank' },
