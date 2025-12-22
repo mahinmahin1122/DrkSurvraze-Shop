@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle, PermissionsBitField, ChannelType } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ButtonBuilder, ButtonStyle, PermissionsBitField } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -158,8 +158,6 @@ const PRIVATE_ORDERS_CHANNEL_ID = '1443293560895049792'; // আপনার দ�
 const userEphemeralMessages = new Map();
 // Store custom rank data temporarily
 const customRankData = new Map();
-// Store order data for button handling
-const orderMessages = new Map();
 
 client.once('ready', () => {
     console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
@@ -525,436 +523,6 @@ client.on('interactionCreate', async (interaction) => {
         customRankModal.addComponents(firstActionRow, secondActionRow);
 
         await interaction.showModal(customRankModal);
-    }
-
-    // Handle Order Management Buttons
-    if (interaction.customId.startsWith('order_')) {
-        console.log(`📋 Order management button clicked: ${interaction.customId} by ${interaction.user.tag}`);
-        
-        // Check if user has permission to manage orders
-        if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-            await interaction.reply({
-                content: '❌ You do not have permission to manage orders.',
-                ephemeral: true
-            });
-            return;
-        }
-
-        const orderId = interaction.customId.split('_')[1];
-        const action = interaction.customId.split('_')[2];
-        
-        console.log(`📋 Order ID: ${orderId}, Action: ${action}`);
-        
-        // Get the order message
-        const message = interaction.message;
-        const embed = message.embeds[0];
-        
-        if (!embed) {
-            await interaction.reply({
-                content: '❌ Could not find order details.',
-                ephemeral: true
-            });
-            return;
-        }
-
-        // Extract customer Discord ID from embed
-        let customerId = null;
-        for (const field of embed.fields) {
-            if (field.name.includes('CUSTOMER INFORMATION') || field.name.includes('Discord ID:')) {
-                const idMatch = field.value.match(/Discord ID:\s*(\d+)/);
-                if (idMatch) {
-                    customerId = idMatch[1];
-                }
-                break;
-            }
-        }
-
-        // Extract Minecraft username
-        let minecraftUsername = '';
-        for (const field of embed.fields) {
-            if (field.value.includes('Minecraft Username:')) {
-                const match = field.value.match(/Minecraft Username:\s*([^\n]+)/);
-                if (match) {
-                    minecraftUsername = match[1].trim();
-                }
-            }
-        }
-
-        // Extract item details
-        let itemName = '';
-        let itemPrice = '';
-        for (const field of embed.fields) {
-            if (field.name.includes('ORDER INFORMATION') || field.value.includes('Item:')) {
-                const itemMatch = field.value.match(/Item:\s*([^\n]+)/);
-                const priceMatch = field.value.match(/Price:\s*([^\n]+)/);
-                
-                if (itemMatch) itemName = itemMatch[1].trim();
-                if (priceMatch) itemPrice = priceMatch[1].trim();
-            }
-        }
-
-        // Handle different actions
-        switch (action) {
-            case 'approve':
-                await handleOrderApproval(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice);
-                break;
-                
-            case 'reject':
-                await handleOrderRejection(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice);
-                break;
-                
-            case 'dismiss':
-                await handleOrderDismiss(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice);
-                break;
-        }
-    }
-});
-
-// Handle Order Approval
-async function handleOrderApproval(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice) {
-    console.log(`✅ Order approval requested for customer: ${customerId}`);
-    
-    // Update the embed with approval status
-    const updatedEmbed = new EmbedBuilder()
-        .setTitle(`✅ APPROVED - ${embed.title}`)
-        .setColor(0x00FF00) // Green color for approved
-        .setDescription(embed.description || '')
-        .addFields(
-            ...embed.fields,
-            {
-                name: '📋 APPROVAL STATUS',
-                value: `**Status:** ✅ **APPROVED**\n**Approved By:** ${interaction.user.tag}\n**Approved At:** <t:${Math.floor(Date.now() / 1000)}:F>\n\n✅ **Order has been approved and processed!**`,
-                inline: false
-            }
-        )
-        .setFooter({ 
-            text: `✅ Approved by ${interaction.user.tag} | DrkSurvraze Shop`, 
-            iconURL: interaction.user.displayAvatarURL() 
-        })
-        .setTimestamp();
-
-    // Remove buttons after approval
-    const disabledRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId('order_approved')
-            .setLabel('✅ APPROVED')
-            .setStyle(ButtonStyle.Success)
-            .setEmoji('✅')
-            .setDisabled(true),
-        new ButtonBuilder()
-            .setCustomId('order_rejected_disabled')
-            .setLabel('❌ REJECTED')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('❌')
-            .setDisabled(true),
-        new ButtonBuilder()
-            .setCustomId('order_dismissed_disabled')
-            .setLabel('🚫 DISMISS')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🚫')
-            .setDisabled(true)
-    );
-
-    await message.edit({
-        embeds: [updatedEmbed],
-        components: [disabledRow]
-    });
-
-    // Send confirmation to the user who clicked
-    await interaction.reply({
-        content: `✅ Order has been **APPROVED** successfully!`,
-        ephemeral: true
-    });
-
-    // Send DM to customer
-    if (customerId) {
-        try {
-            const customer = await client.users.fetch(customerId);
-            const approvalEmbed = new EmbedBuilder()
-                .setTitle('✅ Order Approved - DrkSurvraze Shop')
-                .setColor(0x00FF00)
-                .setThumbnail(shopImages.success)
-                .addFields(
-                    {
-                        name: '📦 Your Order Details',
-                        value: `**Item:** ${itemName}\n**Price:** ${itemPrice}`,
-                        inline: false
-                    },
-                    {
-                        name: '👤 Account Information',
-                        value: `**Minecraft Username:** ${minecraftUsername}\n**Status:** ✅ **APPROVED**`,
-                        inline: false
-                    },
-                    {
-                        name: '🎮 Delivery Information',
-                        value: 'Your order has been approved and will be delivered shortly.\n\n**Please make sure you are online in our Minecraft server.**\n\nIf you face any issues, please contact our support team.',
-                        inline: false
-                    }
-                )
-                .setFooter({ 
-                    text: 'DrkSurvraze Minecraft Community', 
-                    iconURL: shopImages.logo 
-                })
-                .setTimestamp();
-
-            await customer.send({ embeds: [approvalEmbed] });
-            console.log(`📩 Approval DM sent to customer: ${customer.tag}`);
-        } catch (dmError) {
-            console.log(`❌ Could not send approval DM to customer:`, dmError.message);
-        }
-    }
-}
-
-// Handle Order Rejection
-async function handleOrderRejection(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice) {
-    console.log(`❌ Order rejection requested for customer: ${customerId}`);
-    
-    // Create modal for rejection reason
-    const rejectionModal = new ModalBuilder()
-        .setCustomId(`rejection_modal_${message.id}`)
-        .setTitle('❌ Order Rejection Reason');
-
-    const reasonInput = new TextInputBuilder()
-        .setCustomId('rejection_reason')
-        .setLabel('Reason for Rejection')
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Example: Invalid transaction ID, Wrong payment amount, etc.')
-        .setRequired(true)
-        .setMaxLength(500);
-
-    const modalRow = new ActionRowBuilder().addComponents(reasonInput);
-    rejectionModal.addComponents(modalRow);
-
-    await interaction.showModal(rejectionModal);
-}
-
-// Handle Order Dismiss
-async function handleOrderDismiss(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice) {
-    console.log(`🚫 Order dismissal requested for customer: ${customerId}`);
-    
-    // Update the embed with dismissal status
-    const updatedEmbed = new EmbedBuilder()
-        .setTitle(`🚫 DISMISSED - ${embed.title}`)
-        .setColor(0x808080) // Gray color for dismissed
-        .setDescription(embed.description || '')
-        .addFields(
-            ...embed.fields,
-            {
-                name: '📋 DISMISSAL STATUS',
-                value: `**Status:** 🚫 **DISMISSED**\n**Dismissed By:** ${interaction.user.tag}\n**Dismissed At:** <t:${Math.floor(Date.now() / 1000)}:F>\n\n🚫 **This order has been dismissed without customer notification.**`,
-                inline: false
-            }
-        )
-        .setFooter({ 
-            text: `🚫 Dismissed by ${interaction.user.tag} | DrkSurvraze Shop`, 
-            iconURL: interaction.user.displayAvatarURL() 
-        })
-        .setTimestamp();
-
-    // Remove buttons after dismissal
-    const disabledRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId('order_approved_disabled')
-            .setLabel('✅ APPROVED')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('✅')
-            .setDisabled(true),
-        new ButtonBuilder()
-            .setCustomId('order_rejected_disabled')
-            .setLabel('❌ REJECTED')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('❌')
-            .setDisabled(true),
-        new ButtonBuilder()
-            .setCustomId('order_dismissed')
-            .setLabel('🚫 DISMISSED')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🚫')
-            .setDisabled(true)
-    );
-
-    await message.edit({
-        embeds: [updatedEmbed],
-        components: [disabledRow]
-    });
-
-    // Send confirmation to the user who clicked
-    await interaction.reply({
-        content: `🚫 Order has been **DISMISSED** successfully!`,
-        ephemeral: true
-    });
-
-    // Note: No DM is sent to customer for dismissal
-}
-
-// Handle Rejection Modal Submission
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isModalSubmit()) return;
-
-    if (interaction.customId.startsWith('rejection_modal_')) {
-        console.log(`📝 Rejection modal submitted by ${interaction.user.tag}`);
-        
-        const messageId = interaction.customId.split('_')[2];
-        const rejectionReason = interaction.fields.getTextInputValue('rejection_reason');
-        
-        try {
-            // Get the original message
-            const privateOrdersChannel = client.channels.cache.get(PRIVATE_ORDERS_CHANNEL_ID);
-            if (!privateOrdersChannel) {
-                await interaction.reply({
-                    content: '❌ Could not find orders channel.',
-                    ephemeral: true
-                });
-                return;
-            }
-
-            const message = await privateOrdersChannel.messages.fetch(messageId);
-            const embed = message.embeds[0];
-            
-            if (!embed) {
-                await interaction.reply({
-                    content: '❌ Could not find order details.',
-                    ephemeral: true
-                });
-                return;
-            }
-
-            // Extract customer Discord ID from embed
-            let customerId = null;
-            for (const field of embed.fields) {
-                if (field.name.includes('CUSTOMER INFORMATION') || field.value.includes('Discord ID:')) {
-                    const idMatch = field.value.match(/Discord ID:\s*(\d+)/);
-                    if (idMatch) {
-                        customerId = idMatch[1];
-                    }
-                    break;
-                }
-            }
-
-            // Extract Minecraft username
-            let minecraftUsername = '';
-            let itemName = '';
-            let itemPrice = '';
-            
-            for (const field of embed.fields) {
-                if (field.value.includes('Minecraft Username:')) {
-                    const match = field.value.match(/Minecraft Username:\s*([^\n]+)/);
-                    if (match) {
-                        minecraftUsername = match[1].trim();
-                    }
-                }
-                
-                if (field.name.includes('ORDER INFORMATION') || field.value.includes('Item:')) {
-                    const itemMatch = field.value.match(/Item:\s*([^\n]+)/);
-                    const priceMatch = field.value.match(/Price:\s*([^\n]+)/);
-                    
-                    if (itemMatch) itemName = itemMatch[1].trim();
-                    if (priceMatch) itemPrice = priceMatch[1].trim();
-                }
-            }
-
-            // Update the embed with rejection status
-            const updatedEmbed = new EmbedBuilder()
-                .setTitle(`❌ REJECTED - ${embed.title}`)
-                .setColor(0xFF0000) // Red color for rejected
-                .setDescription(embed.description || '')
-                .addFields(
-                    ...embed.fields,
-                    {
-                        name: '📋 REJECTION STATUS',
-                        value: `**Status:** ❌ **REJECTED**\n**Rejected By:** ${interaction.user.tag}\n**Rejected At:** <t:${Math.floor(Date.now() / 1000)}:F>\n**Reason:** ${rejectionReason}`,
-                        inline: false
-                    }
-                )
-                .setFooter({ 
-                    text: `❌ Rejected by ${interaction.user.tag} | DrkSurvraze Shop`, 
-                    iconURL: interaction.user.displayAvatarURL() 
-                })
-                .setTimestamp();
-
-            // Remove buttons after rejection
-            const disabledRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId('order_approved_disabled')
-                    .setLabel('✅ APPROVED')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji('✅')
-                    .setDisabled(true),
-                new ButtonBuilder()
-                    .setCustomId('order_rejected')
-                    .setLabel('❌ REJECTED')
-                    .setStyle(ButtonStyle.Danger)
-                    .setEmoji('❌')
-                    .setDisabled(true),
-                new ButtonBuilder()
-                    .setCustomId('order_dismissed_disabled')
-                    .setLabel('🚫 DISMISS')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji('🚫')
-                    .setDisabled(true)
-            );
-
-            await message.edit({
-                embeds: [updatedEmbed],
-                components: [disabledRow]
-            });
-
-            // Send confirmation to admin
-            await interaction.reply({
-                content: `❌ Order has been **REJECTED** successfully!\n\n**Reason:** ${rejectionReason}`,
-                ephemeral: true
-            });
-
-            // Send DM to customer about rejection
-            if (customerId) {
-                try {
-                    const customer = await client.users.fetch(customerId);
-                    const rejectionEmbed = new EmbedBuilder()
-                        .setTitle('❌ Order Rejected - DrkSurvraze Shop')
-                        .setColor(0xFF0000)
-                        .setThumbnail(shopImages.logo)
-                        .addFields(
-                            {
-                                name: '📦 Order Details',
-                                value: `**Item:** ${itemName}\n**Price:** ${itemPrice}`,
-                                inline: false
-                            },
-                            {
-                                name: '👤 Account Information',
-                                value: `**Minecraft Username:** ${minecraftUsername}\n**Status:** ❌ **REJECTED**`,
-                                inline: false
-                            },
-                            {
-                                name: '📝 Rejection Reason',
-                                value: rejectionReason,
-                                inline: false
-                            },
-                            {
-                                name: '🔄 What to do next?',
-                                value: 'If you think this was a mistake or want to resubmit your order, please contact our support team.\n\nPlease check:\n1. Did you use the correct payment number?\n2. Did you send the exact amount?\n3. Is the transaction ID correct?\n4. Is your Minecraft username correct?',
-                                inline: false
-                            }
-                        )
-                        .setFooter({ 
-                            text: 'DrkSurvraze Minecraft Community', 
-                            iconURL: shopImages.logo 
-                        })
-                        .setTimestamp();
-
-                    await customer.send({ embeds: [rejectionEmbed] });
-                    console.log(`📩 Rejection DM sent to customer: ${customer.tag}`);
-                } catch (dmError) {
-                    console.log(`❌ Could not send rejection DM to customer:`, dmError.message);
-                }
-            }
-
-        } catch (error) {
-            console.log('❌ Error processing rejection:', error);
-            await interaction.reply({
-                content: '❌ Error processing rejection. Please try again.',
-                ephemeral: true
-            });
-        }
     }
 });
 
@@ -1596,6 +1164,493 @@ client.on('interactionCreate', async (interaction) => {
             } catch (privateError) {
                 console.log(`❌ Could not send to private channel:`, privateError.message);
             }
+        }
+    }
+});
+
+// Handle Order Management Buttons
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isButton()) return;
+
+    // Handle order buttons
+    if (interaction.customId.startsWith('order_')) {
+        console.log(`📋 Order management button clicked: ${interaction.customId} by ${interaction.user.tag}`);
+        
+        // Check if user has permission to manage orders
+        if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+            await interaction.reply({
+                content: '❌ You do not have permission to manage orders.',
+                ephemeral: true
+            });
+            return;
+        }
+
+        const parts = interaction.customId.split('_');
+        const orderId = parts[1];
+        const action = parts[2];
+        
+        console.log(`📋 Order ID: ${orderId}, Action: ${action}`);
+        
+        // Get the order message
+        const message = interaction.message;
+        const embed = message.embeds[0];
+        
+        if (!embed) {
+            await interaction.reply({
+                content: '❌ Could not find order details.',
+                ephemeral: true
+            });
+            return;
+        }
+
+        // Extract customer Discord ID from embed
+        let customerId = null;
+        let minecraftUsername = '';
+        let itemName = '';
+        let itemPrice = '';
+        
+        // Parse embed fields
+        for (const field of embed.fields) {
+            const fieldValue = field.value;
+            
+            // Extract Discord ID
+            if (fieldValue.includes('Discord ID:')) {
+                const idMatch = fieldValue.match(/Discord ID:\s*(\d+)/);
+                if (idMatch) {
+                    customerId = idMatch[1];
+                }
+            }
+            
+            // Extract Minecraft username
+            if (fieldValue.includes('Minecraft Username:')) {
+                const match = fieldValue.match(/Minecraft Username:\s*([^\n]+)/);
+                if (match) {
+                    minecraftUsername = match[1].trim();
+                }
+            }
+            
+            // Extract item details
+            if (fieldValue.includes('Item:')) {
+                const itemMatch = fieldValue.match(/Item:\s*([^\n]+)/);
+                if (itemMatch) itemName = itemMatch[1].trim();
+            }
+            
+            if (fieldValue.includes('Price:')) {
+                const priceMatch = fieldValue.match(/Price:\s*([^\n]+)/);
+                if (priceMatch) itemPrice = priceMatch[1].trim();
+            }
+        }
+
+        // Handle different actions
+        switch (action) {
+            case 'approve':
+                await handleOrderApproval(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId);
+                break;
+                
+            case 'reject':
+                await handleOrderRejection(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId);
+                break;
+                
+            case 'dismiss':
+                await handleOrderDismiss(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId);
+                break;
+        }
+    }
+});
+
+// Handle Order Approval
+async function handleOrderApproval(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId) {
+    console.log(`✅ Order approval requested for customer: ${customerId}, Order ID: ${orderId}`);
+    
+    try {
+        // Update the embed with approval status
+        const updatedEmbed = new EmbedBuilder()
+            .setTitle(`✅ APPROVED - ${embed.title.replace('🛒', '').replace('🎨', '').trim()}`)
+            .setColor(0x00FF00) // Green color for approved
+            .setDescription(embed.description || '')
+            .addFields(
+                ...embed.fields.map(field => ({
+                    name: field.name,
+                    value: field.value,
+                    inline: field.inline || false
+                })),
+                {
+                    name: '📋 APPROVAL STATUS',
+                    value: `**Status:** ✅ **APPROVED**\n**Approved By:** ${interaction.user.tag}\n**Approved At:** <t:${Math.floor(Date.now() / 1000)}:F>\n**Order ID:** ${orderId}\n\n✅ **Order has been approved and processed!**`,
+                    inline: false
+                }
+            )
+            .setFooter({ 
+                text: `✅ Approved by ${interaction.user.tag} | Order ID: ${orderId} | DrkSurvraze Shop`, 
+                iconURL: interaction.user.displayAvatarURL() 
+            })
+            .setTimestamp();
+
+        // Remove buttons after approval
+        const disabledRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('order_approved')
+                .setLabel('✅ APPROVED')
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('✅')
+                .setDisabled(true),
+            new ButtonBuilder()
+                .setCustomId('order_rejected_disabled')
+                .setLabel('❌ REJECTED')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('❌')
+                .setDisabled(true),
+            new ButtonBuilder()
+                .setCustomId('order_dismissed_disabled')
+                .setLabel('🚫 DISMISS')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🚫')
+                .setDisabled(true)
+        );
+
+        await message.edit({
+            embeds: [updatedEmbed],
+            components: [disabledRow]
+        });
+
+        // Send notification to the order channel
+        await message.reply({
+            content: `📢 **✅ ORDER APPROVED**\n\n**Order ID:** ${orderId}\n**Approved By:** ${interaction.user.tag}\n**Status:** ✅ **APPROVED**\n**Customer:** ${minecraftUsername}`
+        });
+
+        // Send confirmation to the user who clicked
+        await interaction.reply({
+            content: `✅ Order **${orderId}** has been **APPROVED** successfully!\n\nNotification has been sent to the order channel.`,
+            ephemeral: true
+        });
+
+        // Send DM to customer
+        if (customerId) {
+            try {
+                const customer = await client.users.fetch(customerId);
+                const approvalEmbed = new EmbedBuilder()
+                    .setTitle('✅ Order Approved - DrkSurvraze Shop')
+                    .setColor(0x00FF00)
+                    .setThumbnail(shopImages.success)
+                    .addFields(
+                        {
+                            name: '📦 Your Order Details',
+                            value: `**Item:** ${itemName}\n**Price:** ${itemPrice}\n**Order ID:** ${orderId}`,
+                            inline: false
+                        },
+                        {
+                            name: '👤 Account Information',
+                            value: `**Minecraft Username:** ${minecraftUsername}\n**Status:** ✅ **APPROVED**`,
+                            inline: false
+                        },
+                        {
+                            name: '🎮 Delivery Information',
+                            value: 'Your order has been approved and will be delivered shortly.\n\n**Please make sure you are online in our Minecraft server.**\n\nIf you face any issues, please contact our support team.',
+                            inline: false
+                        }
+                    )
+                    .setFooter({ 
+                        text: 'DrkSurvraze Minecraft Community', 
+                        iconURL: shopImages.logo 
+                    })
+                    .setTimestamp();
+
+                await customer.send({ embeds: [approvalEmbed] });
+                console.log(`📩 Approval DM sent to customer: ${customer.tag}`);
+            } catch (dmError) {
+                console.log(`❌ Could not send approval DM to customer:`, dmError.message);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error approving order:', error);
+        await interaction.reply({
+            content: '❌ Error approving order. Please try again.',
+            ephemeral: true
+        });
+    }
+}
+
+// Handle Order Rejection
+async function handleOrderRejection(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId) {
+    console.log(`❌ Order rejection requested for customer: ${customerId}, Order ID: ${orderId}`);
+    
+    // Create modal for rejection reason
+    const rejectionModal = new ModalBuilder()
+        .setCustomId(`rejection_modal_${message.id}_${orderId}`)
+        .setTitle('❌ Order Rejection Reason');
+
+    const reasonInput = new TextInputBuilder()
+        .setCustomId('rejection_reason')
+        .setLabel('Reason for Rejection')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Example: Invalid transaction ID, Wrong payment amount, etc.')
+        .setRequired(true)
+        .setMaxLength(500);
+
+    const modalRow = new ActionRowBuilder().addComponents(reasonInput);
+    rejectionModal.addComponents(modalRow);
+
+    await interaction.showModal(rejectionModal);
+}
+
+// Handle Order Dismiss
+async function handleOrderDismiss(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId) {
+    console.log(`🚫 Order dismissal requested for customer: ${customerId}, Order ID: ${orderId}`);
+    
+    try {
+        // Update the embed with dismissal status
+        const updatedEmbed = new EmbedBuilder()
+            .setTitle(`🚫 DISMISSED - ${embed.title.replace('🛒', '').replace('🎨', '').trim()}`)
+            .setColor(0x808080) // Gray color for dismissed
+            .setDescription(embed.description || '')
+            .addFields(
+                ...embed.fields.map(field => ({
+                    name: field.name,
+                    value: field.value,
+                    inline: field.inline || false
+                })),
+                {
+                    name: '📋 DISMISSAL STATUS',
+                    value: `**Status:** 🚫 **DISMISSED**\n**Dismissed By:** ${interaction.user.tag}\n**Dismissed At:** <t:${Math.floor(Date.now() / 1000)}:F>\n**Order ID:** ${orderId}\n\n🚫 **This order has been dismissed without customer notification.**`,
+                    inline: false
+                }
+            )
+            .setFooter({ 
+                text: `🚫 Dismissed by ${interaction.user.tag} | Order ID: ${orderId} | DrkSurvraze Shop`, 
+                iconURL: interaction.user.displayAvatarURL() 
+            })
+            .setTimestamp();
+
+        // Remove buttons after dismissal
+        const disabledRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('order_approved_disabled')
+                .setLabel('✅ APPROVED')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('✅')
+                .setDisabled(true),
+            new ButtonBuilder()
+                .setCustomId('order_rejected_disabled')
+                .setLabel('❌ REJECTED')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('❌')
+                .setDisabled(true),
+            new ButtonBuilder()
+                .setCustomId('order_dismissed')
+                .setLabel('🚫 DISMISSED')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🚫')
+                .setDisabled(true)
+        );
+
+        await message.edit({
+            embeds: [updatedEmbed],
+            components: [disabledRow]
+        });
+
+        // Send notification to the order channel
+        await message.reply({
+            content: `📢 **🚫 ORDER DISMISSED**\n\n**Order ID:** ${orderId}\n**Dismissed By:** ${interaction.user.tag}\n**Status:** 🚫 **DISMISSED**\n**Customer:** ${minecraftUsername}\n\n**Note:** No notification sent to customer.`
+        });
+
+        // Send confirmation to the user who clicked
+        await interaction.reply({
+            content: `🚫 Order **${orderId}** has been **DISMISSED** successfully!\n\nNotification has been sent to the order channel.\n\n**Note:** No DM sent to customer.`,
+            ephemeral: true
+        });
+
+        // Note: No DM is sent to customer for dismissal
+    } catch (error) {
+        console.error('❌ Error dismissing order:', error);
+        await interaction.reply({
+            content: '❌ Error dismissing order. Please try again.',
+            ephemeral: true
+        });
+    }
+}
+
+// Handle Rejection Modal Submission
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isModalSubmit()) return;
+
+    if (interaction.customId.startsWith('rejection_modal_')) {
+        console.log(`📝 Rejection modal submitted by ${interaction.user.tag}`);
+        
+        const parts = interaction.customId.split('_');
+        const messageId = parts[2];
+        const orderId = parts[3];
+        const rejectionReason = interaction.fields.getTextInputValue('rejection_reason');
+        
+        try {
+            // Get the original message
+            const privateOrdersChannel = client.channels.cache.get(PRIVATE_ORDERS_CHANNEL_ID);
+            if (!privateOrdersChannel) {
+                await interaction.reply({
+                    content: '❌ Could not find orders channel.',
+                    ephemeral: true
+                });
+                return;
+            }
+
+            const message = await privateOrdersChannel.messages.fetch(messageId);
+            const embed = message.embeds[0];
+            
+            if (!embed) {
+                await interaction.reply({
+                    content: '❌ Could not find order details.',
+                    ephemeral: true
+                });
+                return;
+            }
+
+            // Extract customer Discord ID from embed
+            let customerId = null;
+            let minecraftUsername = '';
+            let itemName = '';
+            let itemPrice = '';
+            
+            // Parse embed fields
+            for (const field of embed.fields) {
+                const fieldValue = field.value;
+                
+                // Extract Discord ID
+                if (fieldValue.includes('Discord ID:')) {
+                    const idMatch = fieldValue.match(/Discord ID:\s*(\d+)/);
+                    if (idMatch) {
+                        customerId = idMatch[1];
+                    }
+                }
+                
+                // Extract Minecraft username
+                if (fieldValue.includes('Minecraft Username:')) {
+                    const match = fieldValue.match(/Minecraft Username:\s*([^\n]+)/);
+                    if (match) {
+                        minecraftUsername = match[1].trim();
+                    }
+                }
+                
+                // Extract item details
+                if (fieldValue.includes('Item:')) {
+                    const itemMatch = fieldValue.match(/Item:\s*([^\n]+)/);
+                    if (itemMatch) itemName = itemMatch[1].trim();
+                }
+                
+                if (fieldValue.includes('Price:')) {
+                    const priceMatch = fieldValue.match(/Price:\s*([^\n]+)/);
+                    if (priceMatch) itemPrice = priceMatch[1].trim();
+                }
+            }
+
+            // Update the embed with rejection status
+            const updatedEmbed = new EmbedBuilder()
+                .setTitle(`❌ REJECTED - ${embed.title.replace('🛒', '').replace('🎨', '').trim()}`)
+                .setColor(0xFF0000) // Red color for rejected
+                .setDescription(embed.description || '')
+                .addFields(
+                    ...embed.fields.map(field => ({
+                        name: field.name,
+                        value: field.value,
+                        inline: field.inline || false
+                    })),
+                    {
+                        name: '📋 REJECTION STATUS',
+                        value: `**Status:** ❌ **REJECTED**\n**Rejected By:** ${interaction.user.tag}\n**Rejected At:** <t:${Math.floor(Date.now() / 1000)}:F>\n**Order ID:** ${orderId}\n**Reason:** ${rejectionReason}`,
+                        inline: false
+                    }
+                )
+                .setFooter({ 
+                    text: `❌ Rejected by ${interaction.user.tag} | Order ID: ${orderId} | DrkSurvraze Shop`, 
+                    iconURL: interaction.user.displayAvatarURL() 
+                })
+                .setTimestamp();
+
+            // Remove buttons after rejection
+            const disabledRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('order_approved_disabled')
+                    .setLabel('✅ APPROVED')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji('✅')
+                    .setDisabled(true),
+                new ButtonBuilder()
+                    .setCustomId('order_rejected')
+                    .setLabel('❌ REJECTED')
+                    .setStyle(ButtonStyle.Danger)
+                    .setEmoji('❌')
+                    .setDisabled(true),
+                new ButtonBuilder()
+                    .setCustomId('order_dismissed_disabled')
+                    .setLabel('🚫 DISMISS')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji('🚫')
+                    .setDisabled(true)
+            );
+
+            await message.edit({
+                embeds: [updatedEmbed],
+                components: [disabledRow]
+            });
+
+            // Send notification to the order channel
+            await message.reply({
+                content: `📢 **❌ ORDER REJECTED**\n\n**Order ID:** ${orderId}\n**Rejected By:** ${interaction.user.tag}\n**Status:** ❌ **REJECTED**\n**Customer:** ${minecraftUsername}\n**Reason:** ${rejectionReason}`
+            });
+
+            // Send confirmation to admin
+            await interaction.reply({
+                content: `❌ Order **${orderId}** has been **REJECTED** successfully!\n\n**Reason:** ${rejectionReason}\n\nNotification has been sent to the order channel.`,
+                ephemeral: true
+            });
+
+            // Send DM to customer about rejection
+            if (customerId) {
+                try {
+                    const customer = await client.users.fetch(customerId);
+                    const rejectionEmbed = new EmbedBuilder()
+                        .setTitle('❌ Order Rejected - DrkSurvraze Shop')
+                        .setColor(0xFF0000)
+                        .setThumbnail(shopImages.logo)
+                        .addFields(
+                            {
+                                name: '📦 Order Details',
+                                value: `**Item:** ${itemName}\n**Price:** ${itemPrice}\n**Order ID:** ${orderId}`,
+                                inline: false
+                            },
+                            {
+                                name: '👤 Account Information',
+                                value: `**Minecraft Username:** ${minecraftUsername}\n**Status:** ❌ **REJECTED**`,
+                                inline: false
+                            },
+                            {
+                                name: '📝 Rejection Reason',
+                                value: rejectionReason,
+                                inline: false
+                            },
+                            {
+                                name: '🔄 What to do next?',
+                                value: 'If you think this was a mistake or want to resubmit your order, please contact our support team.\n\nPlease check:\n1. Did you use the correct payment number?\n2. Did you send the exact amount?\n3. Is the transaction ID correct?\n4. Is your Minecraft username correct?',
+                                inline: false
+                            }
+                        )
+                        .setFooter({ 
+                            text: 'DrkSurvraze Minecraft Community', 
+                            iconURL: shopImages.logo 
+                        })
+                        .setTimestamp();
+
+                    await customer.send({ embeds: [rejectionEmbed] });
+                    console.log(`📩 Rejection DM sent to customer: ${customer.tag}`);
+                } catch (dmError) {
+                    console.log(`❌ Could not send rejection DM to customer:`, dmError.message);
+                }
+            }
+
+        } catch (error) {
+            console.log('❌ Error processing rejection:', error);
+            await interaction.reply({
+                content: '❌ Error processing rejection. Please try again.',
+                ephemeral: true
+            });
         }
     }
 });
