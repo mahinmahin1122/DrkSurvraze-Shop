@@ -1168,7 +1168,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// Handle Order Management Buttons
+// Handle Order Management Buttons - FIXED VERSION
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
@@ -1270,7 +1270,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// Handle Order Approval
+// Handle Order Approval - FIXED VERSION
 async function handleOrderApproval(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId, discordUsername) {
     console.log(`✅ Order approval requested for customer: ${customerId}, Order ID: ${orderId}`);
     
@@ -1336,9 +1336,13 @@ async function handleOrderApproval(interaction, message, embed, customerId, mine
         } catch (replyError) {
             console.log('❌ Could not reply to message, sending new message instead');
             // If can't reply, send a new message
-            await message.channel.send({
-                content: `📢 **✅ ORDER APPROVED**\n\n**Order ID:** ${orderId}\n**Approved By:** ${interaction.user.tag}\n**Status:** ✅ **APPROVED**\n**Customer:** ${discordUsername || minecraftUsername}\n**Reference Message:** ${message.url}`
-            });
+            try {
+                await message.channel.send({
+                    content: `📢 **✅ ORDER APPROVED**\n\n**Order ID:** ${orderId}\n**Approved By:** ${interaction.user.tag}\n**Status:** ✅ **APPROVED**\n**Customer:** ${discordUsername || minecraftUsername}\n**Reference Message:** ${message.url}`
+                });
+            } catch (sendError) {
+                console.log('❌ Could not send message to channel:', sendError.message);
+            }
         }
 
         // Send confirmation to the user who clicked
@@ -1347,28 +1351,44 @@ async function handleOrderApproval(interaction, message, embed, customerId, mine
             ephemeral: true
         });
 
-        // Send DM to customer
+        // Send DM to customer - FIXED TO SEND TO CORRECT USER
         if (customerId) {
             try {
                 const customer = await client.users.fetch(customerId);
+                
+                // Determine what type of item was purchased
+                let itemType = 'general';
+                let deliveryInstructions = 'Your order has been approved and will be delivered shortly.';
+                
+                if (itemName.includes('Token')) {
+                    itemType = 'token';
+                    deliveryInstructions = 'Your tokens have been approved and will be added to your account shortly.';
+                } else if (itemName.includes('RANK') || itemName.includes('Rank')) {
+                    itemType = 'rank';
+                    deliveryInstructions = 'Your rank has been approved and will be upgraded shortly.';
+                } else if (itemName.includes('CUSTOM')) {
+                    itemType = 'custom_rank';
+                    deliveryInstructions = 'Your custom rank has been approved and will be created shortly.';
+                }
+                
                 const approvalEmbed = new EmbedBuilder()
                     .setTitle('✅ Order Approved - DrkSurvraze Shop')
                     .setColor(0x00FF00)
                     .setThumbnail(shopImages.success)
                     .addFields(
                         {
-                            name: '📦 Your Order Details',
+                            name: '📦 Order Details',
                             value: `**Item:** ${itemName}\n**Price:** ${itemPrice}\n**Order ID:** ${orderId}`,
                             inline: false
                         },
                         {
                             name: '👤 Account Information',
-                            value: `**Minecraft Username:** ${minecraftUsername}\n**Status:** ✅ **APPROVED**`,
+                            value: `**Minecraft Username:** ${minecraftUsername}\n**Discord Username:** ${discordUsername || 'N/A'}\n**Status:** ✅ **APPROVED**`,
                             inline: false
                         },
                         {
                             name: '🎮 Delivery Information',
-                            value: 'Your order has been approved and will be delivered shortly.\n\n**Please make sure you are online in our Minecraft server.**\n\nIf you face any issues, please contact our support team.',
+                            value: `${deliveryInstructions}\n\n**Please make sure you are online in our Minecraft server.**\n\nIf you face any issues, please contact our support team.`,
                             inline: false
                         }
                     )
@@ -1378,22 +1398,27 @@ async function handleOrderApproval(interaction, message, embed, customerId, mine
                     })
                     .setTimestamp();
 
-                await customer.send({ embeds: [approvalEmbed] });
-                console.log(`📩 Approval DM sent to customer: ${customer.tag}`);
+                await customer.send({ 
+                    content: `🎉 **CONGRATULATIONS!** Your order has been **APPROVED**!\n\n**Order ID:** ${orderId}\n**Item:** ${itemName}\n\nPlease check the embed below for details.`,
+                    embeds: [approvalEmbed] 
+                });
+                console.log(`📩 Approval DM sent to customer: ${customer.tag} (Discord ID: ${customerId})`);
             } catch (dmError) {
-                console.log(`❌ Could not send approval DM to customer:`, dmError.message);
+                console.log(`❌ Could not send approval DM to customer (ID: ${customerId}):`, dmError.message);
             }
+        } else {
+            console.log(`❌ Customer ID not found in embed for order ${orderId}`);
         }
     } catch (error) {
         console.error('❌ Error approving order:', error);
         await interaction.reply({
-            content: '❌ Error approving order. Please try again.',
+            content: `❌ Error approving order: ${error.message}. Please try again.`,
             ephemeral: true
         });
     }
 }
 
-// Handle Order Rejection
+// Handle Order Rejection - FIXED VERSION
 async function handleOrderRejection(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId, discordUsername) {
     console.log(`❌ Order rejection requested for customer: ${customerId}, Order ID: ${orderId}`);
     
@@ -1425,10 +1450,18 @@ async function handleOrderRejection(interaction, message, embed, customerId, min
     const modalRow = new ActionRowBuilder().addComponents(reasonInput);
     rejectionModal.addComponents(modalRow);
 
-    await interaction.showModal(rejectionModal);
+    try {
+        await interaction.showModal(rejectionModal);
+    } catch (modalError) {
+        console.log('❌ Error showing rejection modal:', modalError);
+        await interaction.reply({
+            content: '❌ Error opening rejection form. Please try again.',
+            ephemeral: true
+        });
+    }
 }
 
-// Handle Order Dismiss
+// Handle Order Dismiss - FIXED VERSION
 async function handleOrderDismiss(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId, discordUsername) {
     console.log(`🚫 Order dismissal requested for customer: ${customerId}, Order ID: ${orderId}`);
     
@@ -1494,9 +1527,13 @@ async function handleOrderDismiss(interaction, message, embed, customerId, minec
         } catch (replyError) {
             console.log('❌ Could not reply to message, sending new message instead');
             // If can't reply, send a new message
-            await message.channel.send({
-                content: `📢 **🚫 ORDER DISMISSED**\n\n**Order ID:** ${orderId}\n**Dismissed By:** ${interaction.user.tag}\n**Status:** 🚫 **DISMISSED**\n**Customer:** ${discordUsername || minecraftUsername}\n**Note:** No notification sent to customer.\n**Reference Message:** ${message.url}`
-            });
+            try {
+                await message.channel.send({
+                    content: `📢 **🚫 ORDER DISMISSED**\n\n**Order ID:** ${orderId}\n**Dismissed By:** ${interaction.user.tag}\n**Status:** 🚫 **DISMISSED**\n**Customer:** ${discordUsername || minecraftUsername}\n**Note:** No notification sent to customer.\n**Reference Message:** ${message.url}`
+                });
+            } catch (sendError) {
+                console.log('❌ Could not send message to channel:', sendError.message);
+            }
         }
 
         // Send confirmation to the user who clicked
@@ -1509,13 +1546,13 @@ async function handleOrderDismiss(interaction, message, embed, customerId, minec
     } catch (error) {
         console.error('❌ Error dismissing order:', error);
         await interaction.reply({
-            content: '❌ Error dismissing order. Please try again.',
+            content: `❌ Error dismissing order: ${error.message}. Please try again.`,
             ephemeral: true
         });
     }
 }
 
-// Handle Rejection Modal Submission
+// Handle Rejection Modal Submission - FIXED VERSION
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isModalSubmit()) return;
 
@@ -1660,9 +1697,13 @@ client.on('interactionCreate', async (interaction) => {
             } catch (replyError) {
                 console.log('❌ Could not reply to message, sending new message instead');
                 // If can't reply, send a new message
-                await message.channel.send({
-                    content: `📢 **❌ ORDER REJECTED**\n\n**Order ID:** ${orderId}\n**Rejected By:** ${interaction.user.tag}\n**Status:** ❌ **REJECTED**\n**Customer:** ${discordUsername || minecraftUsername}\n**Reason:** ${rejectionReason}\n**Reference Message:** ${message.url}`
-                });
+                try {
+                    await message.channel.send({
+                        content: `📢 **❌ ORDER REJECTED**\n\n**Order ID:** ${orderId}\n**Rejected By:** ${interaction.user.tag}\n**Status:** ❌ **REJECTED**\n**Customer:** ${discordUsername || minecraftUsername}\n**Reason:** ${rejectionReason}\n**Reference Message:** ${message.url}`
+                    });
+                } catch (sendError) {
+                    console.log('❌ Could not send message to channel:', sendError.message);
+                }
             }
 
             // Send confirmation to admin
@@ -1687,7 +1728,7 @@ client.on('interactionCreate', async (interaction) => {
                             },
                             {
                                 name: '👤 Account Information',
-                                value: `**Minecraft Username:** ${minecraftUsername}\n**Status:** ❌ **REJECTED**`,
+                                value: `**Minecraft Username:** ${minecraftUsername}\n**Discord Username:** ${discordUsername || 'N/A'}\n**Status:** ❌ **REJECTED**`,
                                 inline: false
                             },
                             {
@@ -1707,17 +1748,22 @@ client.on('interactionCreate', async (interaction) => {
                         })
                         .setTimestamp();
 
-                    await customer.send({ embeds: [rejectionEmbed] });
-                    console.log(`📩 Rejection DM sent to customer: ${customer.tag}`);
+                    await customer.send({ 
+                        content: `⚠️ **IMPORTANT:** Your order has been **REJECTED**!\n\n**Order ID:** ${orderId}\n**Item:** ${itemName}\n\nPlease check the embed below for details.`,
+                        embeds: [rejectionEmbed] 
+                    });
+                    console.log(`📩 Rejection DM sent to customer: ${customer.tag} (Discord ID: ${customerId})`);
                 } catch (dmError) {
-                    console.log(`❌ Could not send rejection DM to customer:`, dmError.message);
+                    console.log(`❌ Could not send rejection DM to customer (ID: ${customerId}):`, dmError.message);
                 }
+            } else {
+                console.log(`❌ Customer ID not found in embed for order ${orderId}`);
             }
 
         } catch (error) {
             console.log('❌ Error processing rejection:', error);
             await interaction.reply({
-                content: '❌ Error processing rejection. Please try again.',
+                content: `❌ Error processing rejection: ${error.message}. Please try again.`,
                 ephemeral: true
             });
         }
