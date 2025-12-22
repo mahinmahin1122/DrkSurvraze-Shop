@@ -74,31 +74,41 @@ const shopItems = {
         image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
         type: 'token'
     },
-    'vip_rank': {
-        name: 'VIP RANK',
-        price: 125,
+    'ROYAL_rank': {
+        name: 'ROYAL RANK',
+        price: 100,
         tokens: 0,
-        description: 'Get VIP Rank in DrkSurvraze Minecraft Server (Ingame 400k)',
+        description: 'Get ROYAL Rank in DrkSurvraze Minecraft Server',
         bKash: '01980583573',
         nagad: '01980583573',
         image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
         type: 'rank'
     },
-    'mvp_rank': {
-        name: 'MVP RANK',
-        price: 210,
+    'LEGEND_rank': {
+        name: 'LEGEND RANK',
+        price: 200,
         tokens: 0,
-        description: 'Get MVP Rank in DrkSurvraze Minecraft Server',
+        description: 'Get LEGEND Rank in DrkSurvraze Minecraft Server',
         bKash: '01980583573',
         nagad: '01980583573',
         image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
         type: 'rank'
     },
-    'elite_rank': {
-        name: 'ELITE RANK',
+    'OVERLORD_rank': {
+        name: 'OVERLORD RANK',
         price: 300,
         tokens: 0,
-        description: 'Get ELITE Rank in DrkSurvraze Minecraft Server',
+        description: 'Get OVERLORD Rank in DrkSurvraze Minecraft Server',
+        bKash: '01980583573',
+        nagad: '01980583573',
+        image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+        type: 'rank'
+    },
+        'GODTIER_rank': {
+        name: 'GODTIER RANK',
+        price: 400,
+        tokens: 0,
+        description: 'Get GODTIER Rank in DrkSurvraze Minecraft Server',
         bKash: '01980583573',
         nagad: '01980583573',
         image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
@@ -213,9 +223,10 @@ client.on('messageCreate', async (message) => {
                 { label: '6000 Token', description: 'Price: 500 BDT', value: '6000_token' },
                 { label: '9600 Token', description: 'Price: 800 BDT', value: '9600_token' },
                 { label: '12000 Token', description: 'Price: 1000 BDT', value: '12000_token' },
-                { label: 'VIP RANK', description: 'Price: 125 BDT', value: 'vip_rank' },
-                { label: 'MVP RANK', description: 'Price: 210 BDT', value: 'mvp_rank' },
-                { label: 'ELITE RANK', description: 'Price: 300 BDT', value: 'elite_rank' },
+                { label: 'ROYAL RANK', description: 'Price: 100 BDT', value: 'ROYAL_rank' },
+                { label: 'LEGEND RANK', description: 'Price: 200 BDT', value: 'LEGEND_rank' },
+                { label: 'OVERLORD RANK', description: 'Price: 300 BDT', value: 'OVERLORD_rank' },
+                { label: 'GODTIER RANK', description: 'Price: 400 BDT', value: 'GODTIER_rank' },
                 { label: '🎨 CUSTOM RANK', description: 'Price: 500 BDT - Create your own!', value: 'custom_rank' }
             ]);
 
