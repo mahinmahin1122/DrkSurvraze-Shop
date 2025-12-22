@@ -1203,21 +1203,33 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
-        // Extract customer Discord ID from embed
+        // Extract information from embed fields
         let customerId = null;
         let minecraftUsername = '';
         let itemName = '';
         let itemPrice = '';
+        let discordUsername = '';
         
-        // Parse embed fields
-        for (const field of embed.fields) {
-            const fieldValue = field.value;
+        // Get fields from embed
+        const fields = embed.data.fields || [];
+        
+        for (const field of fields) {
+            const fieldName = field.name || '';
+            const fieldValue = field.value || '';
             
             // Extract Discord ID
             if (fieldValue.includes('Discord ID:')) {
                 const idMatch = fieldValue.match(/Discord ID:\s*(\d+)/);
                 if (idMatch) {
                     customerId = idMatch[1];
+                }
+            }
+            
+            // Extract Discord username
+            if (fieldValue.includes('Discord User:')) {
+                const match = fieldValue.match(/Discord User:\s*([^\n]+)/);
+                if (match) {
+                    discordUsername = match[1].trim();
                 }
             }
             
@@ -1244,32 +1256,35 @@ client.on('interactionCreate', async (interaction) => {
         // Handle different actions
         switch (action) {
             case 'approve':
-                await handleOrderApproval(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId);
+                await handleOrderApproval(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId, discordUsername);
                 break;
                 
             case 'reject':
-                await handleOrderRejection(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId);
+                await handleOrderRejection(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId, discordUsername);
                 break;
                 
             case 'dismiss':
-                await handleOrderDismiss(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId);
+                await handleOrderDismiss(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId, discordUsername);
                 break;
         }
     }
 });
 
 // Handle Order Approval
-async function handleOrderApproval(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId) {
+async function handleOrderApproval(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId, discordUsername) {
     console.log(`✅ Order approval requested for customer: ${customerId}, Order ID: ${orderId}`);
     
     try {
+        // Get original fields
+        const originalFields = embed.data.fields || [];
+        
         // Update the embed with approval status
         const updatedEmbed = new EmbedBuilder()
-            .setTitle(`✅ APPROVED - ${embed.title.replace('🛒', '').replace('🎨', '').trim()}`)
+            .setTitle(`✅ APPROVED - ${embed.data.title.replace('🛒', '').replace('🎨', '').trim()}`)
             .setColor(0x00FF00) // Green color for approved
-            .setDescription(embed.description || '')
+            .setDescription(embed.data.description || '')
             .addFields(
-                ...embed.fields.map(field => ({
+                ...originalFields.map(field => ({
                     name: field.name,
                     value: field.value,
                     inline: field.inline || false
@@ -1313,10 +1328,18 @@ async function handleOrderApproval(interaction, message, embed, customerId, mine
             components: [disabledRow]
         });
 
-        // Send notification to the order channel
-        await message.reply({
-            content: `📢 **✅ ORDER APPROVED**\n\n**Order ID:** ${orderId}\n**Approved By:** ${interaction.user.tag}\n**Status:** ✅ **APPROVED**\n**Customer:** ${minecraftUsername}`
-        });
+        // Send notification to the order channel (reply to the original message)
+        try {
+            await message.reply({
+                content: `📢 **✅ ORDER APPROVED**\n\n**Order ID:** ${orderId}\n**Approved By:** ${interaction.user.tag}\n**Status:** ✅ **APPROVED**\n**Customer:** ${discordUsername || minecraftUsername}`
+            });
+        } catch (replyError) {
+            console.log('❌ Could not reply to message, sending new message instead');
+            // If can't reply, send a new message
+            await message.channel.send({
+                content: `📢 **✅ ORDER APPROVED**\n\n**Order ID:** ${orderId}\n**Approved By:** ${interaction.user.tag}\n**Status:** ✅ **APPROVED**\n**Customer:** ${discordUsername || minecraftUsername}\n**Reference Message:** ${message.url}`
+            });
+        }
 
         // Send confirmation to the user who clicked
         await interaction.reply({
@@ -1371,8 +1394,20 @@ async function handleOrderApproval(interaction, message, embed, customerId, mine
 }
 
 // Handle Order Rejection
-async function handleOrderRejection(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId) {
+async function handleOrderRejection(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId, discordUsername) {
     console.log(`❌ Order rejection requested for customer: ${customerId}, Order ID: ${orderId}`);
+    
+    // Store order data temporarily for modal
+    const tempData = {
+        messageId: message.id,
+        channelId: message.channel.id,
+        orderId: orderId,
+        customerId: customerId,
+        minecraftUsername: minecraftUsername,
+        itemName: itemName,
+        itemPrice: itemPrice,
+        discordUsername: discordUsername
+    };
     
     // Create modal for rejection reason
     const rejectionModal = new ModalBuilder()
@@ -1394,17 +1429,20 @@ async function handleOrderRejection(interaction, message, embed, customerId, min
 }
 
 // Handle Order Dismiss
-async function handleOrderDismiss(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId) {
+async function handleOrderDismiss(interaction, message, embed, customerId, minecraftUsername, itemName, itemPrice, orderId, discordUsername) {
     console.log(`🚫 Order dismissal requested for customer: ${customerId}, Order ID: ${orderId}`);
     
     try {
+        // Get original fields
+        const originalFields = embed.data.fields || [];
+        
         // Update the embed with dismissal status
         const updatedEmbed = new EmbedBuilder()
-            .setTitle(`🚫 DISMISSED - ${embed.title.replace('🛒', '').replace('🎨', '').trim()}`)
+            .setTitle(`🚫 DISMISSED - ${embed.data.title.replace('🛒', '').replace('🎨', '').trim()}`)
             .setColor(0x808080) // Gray color for dismissed
-            .setDescription(embed.description || '')
+            .setDescription(embed.data.description || '')
             .addFields(
-                ...embed.fields.map(field => ({
+                ...originalFields.map(field => ({
                     name: field.name,
                     value: field.value,
                     inline: field.inline || false
@@ -1448,10 +1486,18 @@ async function handleOrderDismiss(interaction, message, embed, customerId, minec
             components: [disabledRow]
         });
 
-        // Send notification to the order channel
-        await message.reply({
-            content: `📢 **🚫 ORDER DISMISSED**\n\n**Order ID:** ${orderId}\n**Dismissed By:** ${interaction.user.tag}\n**Status:** 🚫 **DISMISSED**\n**Customer:** ${minecraftUsername}\n\n**Note:** No notification sent to customer.`
-        });
+        // Send notification to the order channel (reply to the original message)
+        try {
+            await message.reply({
+                content: `📢 **🚫 ORDER DISMISSED**\n\n**Order ID:** ${orderId}\n**Dismissed By:** ${interaction.user.tag}\n**Status:** 🚫 **DISMISSED**\n**Customer:** ${discordUsername || minecraftUsername}\n\n**Note:** No notification sent to customer.`
+            });
+        } catch (replyError) {
+            console.log('❌ Could not reply to message, sending new message instead');
+            // If can't reply, send a new message
+            await message.channel.send({
+                content: `📢 **🚫 ORDER DISMISSED**\n\n**Order ID:** ${orderId}\n**Dismissed By:** ${interaction.user.tag}\n**Status:** 🚫 **DISMISSED**\n**Customer:** ${discordUsername || minecraftUsername}\n**Note:** No notification sent to customer.\n**Reference Message:** ${message.url}`
+            });
+        }
 
         // Send confirmation to the user who clicked
         await interaction.reply({
@@ -1482,7 +1528,7 @@ client.on('interactionCreate', async (interaction) => {
         const rejectionReason = interaction.fields.getTextInputValue('rejection_reason');
         
         try {
-            // Get the original message
+            // Get the original channel
             const privateOrdersChannel = client.channels.cache.get(PRIVATE_ORDERS_CHANNEL_ID);
             if (!privateOrdersChannel) {
                 await interaction.reply({
@@ -1492,6 +1538,7 @@ client.on('interactionCreate', async (interaction) => {
                 return;
             }
 
+            // Fetch the message
             const message = await privateOrdersChannel.messages.fetch(messageId);
             const embed = message.embeds[0];
             
@@ -1503,21 +1550,32 @@ client.on('interactionCreate', async (interaction) => {
                 return;
             }
 
-            // Extract customer Discord ID from embed
+            // Extract information from embed
             let customerId = null;
             let minecraftUsername = '';
             let itemName = '';
             let itemPrice = '';
+            let discordUsername = '';
             
-            // Parse embed fields
-            for (const field of embed.fields) {
-                const fieldValue = field.value;
+            // Get fields from embed
+            const fields = embed.data.fields || [];
+            
+            for (const field of fields) {
+                const fieldValue = field.value || '';
                 
                 // Extract Discord ID
                 if (fieldValue.includes('Discord ID:')) {
                     const idMatch = fieldValue.match(/Discord ID:\s*(\d+)/);
                     if (idMatch) {
                         customerId = idMatch[1];
+                    }
+                }
+                
+                // Extract Discord username
+                if (fieldValue.includes('Discord User:')) {
+                    const match = fieldValue.match(/Discord User:\s*([^\n]+)/);
+                    if (match) {
+                        discordUsername = match[1].trim();
                     }
                 }
                 
@@ -1541,13 +1599,16 @@ client.on('interactionCreate', async (interaction) => {
                 }
             }
 
+            // Get original fields
+            const originalFields = embed.data.fields || [];
+            
             // Update the embed with rejection status
             const updatedEmbed = new EmbedBuilder()
-                .setTitle(`❌ REJECTED - ${embed.title.replace('🛒', '').replace('🎨', '').trim()}`)
+                .setTitle(`❌ REJECTED - ${embed.data.title.replace('🛒', '').replace('🎨', '').trim()}`)
                 .setColor(0xFF0000) // Red color for rejected
-                .setDescription(embed.description || '')
+                .setDescription(embed.data.description || '')
                 .addFields(
-                    ...embed.fields.map(field => ({
+                    ...originalFields.map(field => ({
                         name: field.name,
                         value: field.value,
                         inline: field.inline || false
@@ -1591,10 +1652,18 @@ client.on('interactionCreate', async (interaction) => {
                 components: [disabledRow]
             });
 
-            // Send notification to the order channel
-            await message.reply({
-                content: `📢 **❌ ORDER REJECTED**\n\n**Order ID:** ${orderId}\n**Rejected By:** ${interaction.user.tag}\n**Status:** ❌ **REJECTED**\n**Customer:** ${minecraftUsername}\n**Reason:** ${rejectionReason}`
-            });
+            // Send notification to the order channel (reply to the original message)
+            try {
+                await message.reply({
+                    content: `📢 **❌ ORDER REJECTED**\n\n**Order ID:** ${orderId}\n**Rejected By:** ${interaction.user.tag}\n**Status:** ❌ **REJECTED**\n**Customer:** ${discordUsername || minecraftUsername}\n**Reason:** ${rejectionReason}`
+                });
+            } catch (replyError) {
+                console.log('❌ Could not reply to message, sending new message instead');
+                // If can't reply, send a new message
+                await message.channel.send({
+                    content: `📢 **❌ ORDER REJECTED**\n\n**Order ID:** ${orderId}\n**Rejected By:** ${interaction.user.tag}\n**Status:** ❌ **REJECTED**\n**Customer:** ${discordUsername || minecraftUsername}\n**Reason:** ${rejectionReason}\n**Reference Message:** ${message.url}`
+                });
+            }
 
             // Send confirmation to admin
             await interaction.reply({
