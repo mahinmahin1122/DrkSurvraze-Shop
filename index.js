@@ -15,85 +15,115 @@ const client = new Client({
     ]
 });
 
-/* ================= CONFIG ================= */
-const TICKET_COMMAND = '!ticket create'; // change if needed
-
-/* ================= SHOP ITEMS ================= */
+// ================= SHOP ITEMS =================
 const shopItems = {
-    '600_token': { name: '600 Token', price: 50, tokens: 600, type: 'token', image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png', description: '600 Token package' },
-    '1200_token': { name: '1200 Token', price: 100, tokens: 1200, type: 'token', image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png', description: '1200 Token package' },
-    '3000_token': { name: '3000 Token', price: 250, tokens: 3000, type: 'token', image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png', description: '3000 Token package' },
-    '6000_token': { name: '6000 Token', price: 500, tokens: 6000, type: 'token', image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png', description: '6000 Token package' },
-    '9600_token': { name: '9600 Token', price: 800, tokens: 9600, type: 'token', image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png', description: '9600 Token package' },
-    '12000_token': { name: '12000 Token', price: 1000, tokens: 12000, type: 'token', image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png', description: '12000 Token package' },
-    'ROYAL_rank': { name: 'ROYAL RANK', price: 100, type: 'rank', image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png', description: 'ROYAL Rank' },
-    'LEGEND_rank': { name: 'LEGEND RANK', price: 200, type: 'rank', image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png', description: 'LEGEND Rank' },
-    'OVERLORD_rank': { name: 'OVERLORD RANK', price: 300, type: 'rank', image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png', description: 'OVERLORD Rank' },
-    'GODTIER_rank': { name: 'GODTIER RANK', price: 400, type: 'rank', image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png', description: 'GODTIER Rank' },
-    'custom_rank': { name: 'CUSTOM RANK', price: 500, type: 'custom_rank', image: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png', description: 'Custom Rank' }
+    '600_token': { name: '600 Token', price: 50, type: 'token' },
+    '1200_token': { name: '1200 Token', price: 100, type: 'token' },
+    '3000_token': { name: '3000 Token', price: 250, type: 'token' },
+    '6000_token': { name: '6000 Token', price: 500, type: 'token' },
+    '9600_token': { name: '9600 Token', price: 800, type: 'token' },
+    '12000_token': { name: '12000 Token', price: 1000, type: 'token' },
+
+    'ROYAL_rank': { name: 'ROYAL RANK', price: 100, type: 'rank' },
+    'LEGEND_rank': { name: 'LEGEND RANK', price: 200, type: 'rank' },
+    'OVERLORD_rank': { name: 'OVERLORD RANK', price: 300, type: 'rank' },
+    'GODTIER_rank': { name: 'GODTIER RANK', price: 400, type: 'rank' },
+    'custom_rank': { name: 'CUSTOM RANK', price: 500, type: 'custom_rank' }
 };
 
+// 🎫 Ticket Channel ID
+const TICKET_CHANNEL_ID = '1441344298426830919';
+
+// ================= BOT READY =================
 client.once('ready', () => {
     console.log(`✅ Bot Online: ${client.user.tag}`);
 });
 
-/* ================= SHOP COMMAND ================= */
+// ================= SHOP COMMAND =================
 client.on('messageCreate', async (message) => {
-    if (message.content === '!shop' && !message.author.bot) {
+    if (message.author.bot) return;
+    if (message.content !== '!shop') return;
 
-        const embed = new EmbedBuilder()
-            .setTitle('🛒 DrkSurvraze Shop')
-            .setDescription('Select item to preview & auto create ticket')
-            .setColor(0x5865F2);
+    const embed = new EmbedBuilder()
+        .setTitle('🛒 DrkSurvraze Shop')
+        .setDescription(
+            '**Token / Rank select করুন**\n\n' +
+            '⚠️ Purchase করার জন্য ticket create করতে হবে'
+        )
+        .setColor(0x5865F2)
+        .setFooter({ text: 'DrkSurvraze Minecraft Community' });
 
-        const menu = new StringSelectMenuBuilder()
-            .setCustomId('shop_select')
-            .setPlaceholder('Select item')
-            .addOptions(
-                Object.keys(shopItems).map(key => ({
-                    label: shopItems[key].name,
-                    description: `Price: ${shopItems[key].price} BDT`,
-                    value: key
-                }))
-            );
+    const menu = new StringSelectMenuBuilder()
+        .setCustomId('shop_select')
+        .setPlaceholder('Select an item...')
+        .addOptions([
+            { label: '600 Token', value: '600_token', emoji: '🪙' },
+            { label: '1200 Token', value: '1200_token', emoji: '🪙' },
+            { label: '3000 Token', value: '3000_token', emoji: '🪙' },
+            { label: '6000 Token', value: '6000_token', emoji: '🪙' },
+            { label: '9600 Token', value: '9600_token', emoji: '🪙' },
+            { label: '12000 Token', value: '12000_token', emoji: '🪙' },
 
-        await message.channel.send({
-            embeds: [embed],
-            components: [new ActionRowBuilder().addComponents(menu)]
-        });
-    }
+            { label: 'ROYAL RANK', value: 'ROYAL_rank', emoji: '👑' },
+            { label: 'LEGEND RANK', value: 'LEGEND_rank', emoji: '👑' },
+            { label: 'OVERLORD RANK', value: 'OVERLORD_rank', emoji: '👑' },
+            { label: 'GODTIER RANK', value: 'GODTIER_rank', emoji: '👑' },
+            { label: 'CUSTOM RANK', value: 'custom_rank', emoji: '🎨' }
+        ]);
+
+    const row = new ActionRowBuilder().addComponents(menu);
+
+    await message.channel.send({
+        embeds: [embed],
+        components: [row]
+    });
 });
 
-/* ================= INTERACTION ================= */
+// ================= SELECT MENU HANDLER =================
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isStringSelectMenu()) return;
     if (interaction.customId !== 'shop_select') return;
 
     const item = shopItems[interaction.values[0]];
+    if (!item) {
+        return interaction.reply({
+            content: '❌ Item not found.',
+            ephemeral: true
+        });
+    }
+
+    const replyEmbed = new EmbedBuilder()
+        .setTitle('🎫 Ticket Required')
+        .setColor(0xFF5555)
+        .setDescription(
+            `আপনি **${item.name}** নিতে চান ✅\n\n` +
+            `➡️ Purchase করার জন্য নিচের channel এ **ticket create করুন**\n\n` +
+            `🔗 <#${TICKET_CHANNEL_ID}>`
+        )
+        .addFields(
+            {
+                name: '📌 Ticket এ দিবেন',
+                value:
+                    '• Minecraft Username\n' +
+                    '• Selected Item\n' +
+                    '• Payment Screenshot\n' +
+                    '• Transaction ID'
+            }
+        )
+        .setFooter({
+            text: 'DrkSurvraze Shop System'
+        })
+        .setTimestamp();
 
     await interaction.reply({
-        content: '🎫 Creating ticket for your purchase...',
-        ephemeral: true
+        embeds: [replyEmbed],
+        ephemeral: true // 🔒 only user sees
     });
-
-    /* ===== Ticket Create ===== */
-    await interaction.channel.send(TICKET_COMMAND);
-
-    /* ===== Purchase Info ===== */
-    setTimeout(async () => {
-        await interaction.channel.send({
-            content:
-                `@everyone\n` +
-                `🛒 **NEW PURCHASE REQUEST**\n\n` +
-                `👤 User: <@${interaction.user.id}>\n` +
-                `📦 Item: **${item.name}**\n` +
-                `💰 Price: **${item.price} BDT**`
-        });
-    }, 3000);
 });
 
-/* ================= ERROR ================= */
+// ================= ERROR HANDLING =================
+client.on('error', console.error);
 process.on('unhandledRejection', console.error);
 
-/* ================= LOGIN ================= */
+// ================= LOGIN =================
 client.login(process.env.DISCORD_TOKEN);
