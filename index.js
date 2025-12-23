@@ -1,10 +1,4 @@
-const { 
-    Client, 
-    GatewayIntentBits, 
-    ActionRowBuilder, 
-    StringSelectMenuBuilder, 
-    EmbedBuilder 
-} = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -15,94 +9,102 @@ const client = new Client({
     ]
 });
 
-/* ================= SHOP ITEMS ================= */
-const shopItems = {
-    '600_token': { name: '600 Token', price: 50 },
-    '1200_token': { name: '1200 Token', price: 100 },
-    '3000_token': { name: '3000 Token', price: 250 },
-    '6000_token': { name: '6000 Token', price: 500 },
-    '9600_token': { name: '9600 Token', price: 800 },
-    '12000_token': { name: '12000 Token', price: 1000 },
-    'ROYAL_rank': { name: 'ROYAL RANK', price: 100 },
-    'LEGEND_rank': { name: 'LEGEND RANK', price: 200 },
-    'OVERLORD_rank': { name: 'OVERLORD RANK', price: 300 },
-    'GODTIER_rank': { name: 'GODTIER RANK', price: 400 },
-    'custom_rank': { name: 'CUSTOM RANK', price: 500 }
+// আপনার ছবি লিঙ্কগুলো এখানে ব্যবহার করেছি
+const shopImages = {
+    banner: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+    logo: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
 };
 
-/* ================= BOT READY ================= */
 client.once('ready', () => {
-    console.log(`✅ Bot Online: ${client.user.tag}`);
+    console.log(`✅ DrkSurvraze Shop Bot is online as ${client.user.tag}`);
+    console.log(`🎮 Displaying shop items only - No interactive features`);
 });
 
-/* ================= SHOP COMMAND ================= */
+// Create Shop Command - শুধু এম্বেড দেখাবে, কোন বাটন বা মেনু নেই
 client.on('messageCreate', async (message) => {
-    if (message.content === '!shop' && !message.author.bot) {
-
+    if (message.content === '!shop' && message.author.bot === false) {
+        console.log(`🛒 Shop display shown for ${message.author.tag}`);
+        
         const embed = new EmbedBuilder()
-            .setTitle('🛒 DrkSurvraze Shop')
-            .setDescription(
-                '**Select an item to purchase**\n' +
-                '🎫 Ticket will be created automatically'
+            .setTitle('🛒 DrkSurvraze Minecraft Shop')
+            .setColor(0x5865F2)
+            .setThumbnail(shopImages.logo)
+            .setImage(shopImages.banner)
+            .setDescription('**Welcome to DrkSurvraze Shop!**\n\n*Shop is currently for display only*\n')
+            .addFields(
+                {
+                    name: '🎮 **TOKEN PACKAGES**',
+                    value: '```\n' +
+                           '┌─────────────────────────────┐\n' +
+                           '│  🪙  600 Token  →  50 BDT   │\n' +
+                           '│  🪙 1200 Token  → 100 BDT   │\n' +
+                           '│  🪙 3000 Token  → 250 BDT   │\n' +
+                           '│  🪙 6000 Token  → 500 BDT   │\n' +
+                           '│  🪙 9600 Token  → 800 BDT   │\n' +
+                           '│  🪙 12000 Token → 1000 BDT  │\n' +
+                           '└─────────────────────────────┘\n```',
+                    inline: false
+                },
+                {
+                    name: '👑 **RANK PACKAGES**',
+                    value: '```\n' +
+                           '┌─────────────────────────────┐\n' +
+                           '│  👑 ROYAL RANK   → 100 BDT  │\n' +
+                           '│  👑 LEGEND RANK  → 200 BDT  │\n' +
+                           '│  👑 OVERLORD     → 300 BDT  │\n' +
+                           '│  👑 GODTIER      → 400 BDT  │\n' +
+                           '│  🎨 CUSTOM RANK  → 500 BDT  │\n' +
+                           '└─────────────────────────────┘\n```',
+                    inline: false
+                },
+                {
+                    name: '📞 **CONTACT FOR PURCHASE**',
+                    value: '```\n' +
+                           'For purchases, please contact:\n' +
+                           '📱 WhatsApp: 01980583573\n' +
+                           '💳 bKash/Nagad: 01980583573\n' +
+                           '```',
+                    inline: false
+                }
             )
-            .setColor(0x00ff00)
-            .setFooter({ text: 'DrkSurvraze SMP Shop System' });
-
-        const menu = new StringSelectMenuBuilder()
-            .setCustomId('shop_select')
-            .setPlaceholder('Select item to buy')
-            .addOptions(
-                Object.keys(shopItems).map(key => ({
-                    label: shopItems[key].name,
-                    description: `Price: ${shopItems[key].price} BDT`,
-                    value: key
-                }))
-            );
-
-        const row = new ActionRowBuilder().addComponents(menu);
+            .addFields(
+                {
+                    name: '📋 **PAYMENT METHODS**',
+                    value: '• 💳 bKash\n• 📱 Nagad\n• 📞 Direct Bank Transfer',
+                    inline: true
+                },
+                {
+                    name: '⚡ **DELIVERY TIME**',
+                    value: '• Instant Delivery\n• 24/7 Support\n• After Payment',
+                    inline: true
+                }
+            )
+            .setFooter({ 
+                text: 'DrkSurvraze Minecraft Community | Server IP: play.drksurvraze.com', 
+                iconURL: shopImages.logo 
+            })
+            .setTimestamp();
 
         await message.channel.send({
-            embeds: [embed],
-            components: [row]
+            embeds: [embed]
         });
     }
 });
 
-/* ================= INTERACTION ================= */
+// কোন ইন্টার‍্যাকশন হ্যান্ডল করবে না
 client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isStringSelectMenu()) return;
-    if (interaction.customId !== 'shop_select') return;
-
-    const itemKey = interaction.values[0];
-    const item = shopItems[itemKey];
-
-    // User reply
-    await interaction.reply({
-        content: '🎫 Creating your purchase ticket...',
-        ephemeral: true
-    });
-
-    /* ===== TicketKing Ticket Create =====
-       যদি command আলাদা হয় এখানে change করো */
-    await interaction.channel.send('!ticket create');
-
-    /* ===== Delay দিয়ে purchase message ===== */
-    setTimeout(async () => {
-        await interaction.channel.send({
-            content:
-                `@everyone\n` +
-                `🛒 **NEW PURCHASE TICKET**\n\n` +
-                `👤 User: <@${interaction.user.id}>\n` +
-                `📦 Item: **${item.name}**\n` +
-                `💰 Price: **${item.price} BDT**`
-        });
-    }, 3000);
+    // সব ইন্টার‍্যাকশন ইগনোর করবে
+    return;
 });
 
-/* ================= ERROR HANDLING ================= */
-process.on('unhandledRejection', (err) => {
-    console.error('❌ Error:', err);
+// Error handling
+client.on('error', (error) => {
+    console.error('❌ Client error:', error);
 });
 
-/* ================= LOGIN ================= */
+process.on('unhandledRejection', (error) => {
+    console.error('❌ Unhandled promise rejection:', error);
+});
+
+// Bot login
 client.login(process.env.DISCORD_TOKEN);
