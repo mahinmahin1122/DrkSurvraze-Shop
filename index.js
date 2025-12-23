@@ -110,7 +110,7 @@ client.on('messageCreate', async (message) => {
         .setTitle('🛒 DrkSurvraze Shop')
         .setDescription(
             '**Token / Rank select করুন**\n\n' +
-            '⚠️ Purchase করার জন্য ticket create করতে হবে'
+            'Purchase করার জন্য Select an item ক্লিক করুন'
         )
         .setColor(0x5865F2)
         .setThumbnail(shopImages.logo)
@@ -131,10 +131,10 @@ client.on('messageCreate', async (message) => {
             { label: '9600 Token', value: '9600_token', emoji: '🪙' },
             { label: '12000 Token', value: '12000_token', emoji: '🪙' },
 
-            { label: 'ROYAL RANK', value: 'ROYAL_rank', emoji: '👑' },
-            { label: 'LEGEND RANK', value: 'LEGEND_rank', emoji: '👑' },
+            { label: 'ROYAL RANK', value: 'ROYAL_rank', emoji: '⚜️' },
+            { label: 'LEGEND RANK', value: 'LEGEND_rank', emoji: '⚜️' },
             { label: 'OVERLORD RANK', value: 'OVERLORD_rank', emoji: '👑' },
-            { label: 'GODTIER RANK', value: 'GODTIER_rank', emoji: '👑' },
+            { label: 'GODTIER RANK', value: 'GODTIER_rank', emoji: '𓆩👑𓆪' },
             { label: 'CUSTOM RANK', value: 'custom_rank', emoji: '🎨' }
         ]);
 
@@ -198,15 +198,15 @@ client.on('interactionCreate', async (interaction) => {
                 value:
                     '```\n' +
                     '1. Minecraft Username\n' +
-                    '2. Selected Item\n' +
+                    '2. Selected Item name \n' +
                     '3. Payment Screenshot\n' +
-                    '4. Transaction ID\n' +
+                    '4. If you have any questions, please let me know\n' +
                     '```',
                 inline: false
             },
             {
                 name: '📞 Contact Info',
-                value: '```\nWhatsApp: 01980583573\nbKash/Nagad: 01980583573\n```',
+                value: '```\nbkash: 01980583573\nNagad: 01980583573\n```',
                 inline: false
             }
         )
