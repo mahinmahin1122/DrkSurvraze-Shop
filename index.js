@@ -30,6 +30,12 @@ const shopItems = {
     'GODTIER_rank': { name: 'GODTIER RANK', price: 400, type: 'rank' },
     'custom_rank': { name: 'CUSTOM RANK', price: 500, type: 'custom_rank' }
 };
+// ================= IMAGES =================
+const shopImages = {
+    banner: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+    logo: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
+    thumbnail: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
+};
 
 // 🎫 Ticket Channel ID
 const TICKET_CHANNEL_ID = '1441344298426830919';
@@ -48,11 +54,16 @@ client.on('messageCreate', async (message) => {
         .setTitle('🛒 DrkSurvraze Shop')
         .setDescription(
             '**Token / Rank select করুন**\n\n' +
-            '⚠️ Purchase করার জন্য ticket create করতে হবে'
+            'Purchase করার জন্য Select an item এ ক্লিক করুন '
         )
         .setColor(0x5865F2)
-        .setFooter({ text: 'DrkSurvraze Minecraft Community' });
-
+        .setThumbnail(shopImages.logo)
+        .setImage(shopImages.banner)
+        .setFooter({ 
+            text: 'DrkSurvraze Minecraft Community', 
+            iconURL: shopImages.logo 
+        });
+    
     const menu = new StringSelectMenuBuilder()
         .setCustomId('shop_select')
         .setPlaceholder('Select an item...')
@@ -64,10 +75,10 @@ client.on('messageCreate', async (message) => {
             { label: '9600 Token', value: '9600_token', emoji: '🪙' },
             { label: '12000 Token', value: '12000_token', emoji: '🪙' },
 
-            { label: 'ROYAL RANK', value: 'ROYAL_rank', emoji: '👑' },
-            { label: 'LEGEND RANK', value: 'LEGEND_rank', emoji: '👑' },
+            { label: 'ROYAL RANK', value: 'ROYAL_rank', emoji: '⚜️' },
+            { label: 'LEGEND RANK', value: 'LEGEND_rank', emoji: '⚜️' },
             { label: 'OVERLORD RANK', value: 'OVERLORD_rank', emoji: '👑' },
-            { label: 'GODTIER RANK', value: 'GODTIER_rank', emoji: '👑' },
+            { label: 'GODTIER RANK', value: 'GODTIER_rank', emoji: '𓆩👑𓆪' },
             { label: 'CUSTOM RANK', value: 'custom_rank', emoji: '🎨' }
         ]);
 
@@ -107,11 +118,18 @@ client.on('interactionCreate', async (interaction) => {
                     '• Minecraft Username\n' +
                     '• Selected Item\n' +
                     '• Payment Screenshot\n' +
-                    '• Transaction ID'
+                    '• Let me know if there is any problem.'
             }
         )
+        name: '📞 Contact Info',
+                value: '```\nWhatsApp: 01980583573\nbKash/Nagad: 01980583573\n```',
+                inline: false
+            }
+        )
+        .setImage(shopImages.banner)
         .setFooter({
-            text: 'DrkSurvraze Shop System'
+            text: 'DrkSurvraze Shop System | Ticket Required for Purchase',
+            iconURL: shopImages.logo
         })
         .setTimestamp();
 
