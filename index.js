@@ -30,11 +30,11 @@ const shopItems = {
     'GODTIER_rank': { name: 'GODTIER RANK', price: 400, type: 'rank' },
     'custom_rank': { name: 'CUSTOM RANK', price: 500, type: 'custom_rank' }
 };
+
 // ================= IMAGES =================
 const shopImages = {
     banner: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
-    logo: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png',
-    thumbnail: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
+    logo: 'https://i.ibb.co/7JL3Gncf/Untitled-design.png'
 };
 
 // 🎫 Ticket Channel ID
@@ -54,7 +54,7 @@ client.on('messageCreate', async (message) => {
         .setTitle('🛒 DrkSurvraze Shop')
         .setDescription(
             '**Token / Rank select করুন**\n\n' +
-            'Purchase করার জন্য Select an item এ ক্লিক করুন '
+            'Purchase করার জন্য নিচের menu ব্যবহার করুন'
         )
         .setColor(0x5865F2)
         .setThumbnail(shopImages.logo)
@@ -63,7 +63,7 @@ client.on('messageCreate', async (message) => {
             text: 'DrkSurvraze Minecraft Community', 
             iconURL: shopImages.logo 
         });
-    
+
     const menu = new StringSelectMenuBuilder()
         .setCustomId('shop_select')
         .setPlaceholder('Select an item...')
@@ -78,7 +78,7 @@ client.on('messageCreate', async (message) => {
             { label: 'ROYAL RANK', value: 'ROYAL_rank', emoji: '⚜️' },
             { label: 'LEGEND RANK', value: 'LEGEND_rank', emoji: '⚜️' },
             { label: 'OVERLORD RANK', value: 'OVERLORD_rank', emoji: '👑' },
-            { label: 'GODTIER RANK', value: 'GODTIER_rank', emoji: '𓆩👑𓆪' },
+            { label: 'GODTIER RANK', value: 'GODTIER_rank', emoji: '👑' },
             { label: 'CUSTOM RANK', value: 'custom_rank', emoji: '🎨' }
         ]);
 
@@ -117,25 +117,23 @@ client.on('interactionCreate', async (interaction) => {
                 value:
                     '• Minecraft Username\n' +
                     '• Selected Item\n' +
-                    '• Payment Screenshot\n' +
-                    '• Let me know if there is any problem.'
-            }
-        )
-        name: '📞 Contact Info',
-                value: '```\nWhatsApp: 01980583573\nbKash/Nagad: 01980583573\n```',
-                inline: false
+                    '• Payment Screenshot'
+            },
+            {
+                name: '📞 Contact Info',
+                value: '```\nWhatsApp: 01980583573\nbKash/Nagad: 01980583573\n```'
             }
         )
         .setImage(shopImages.banner)
         .setFooter({
-            text: 'DrkSurvraze Shop System | Ticket Required for Purchase',
+            text: 'DrkSurvraze Shop System | Ticket Required',
             iconURL: shopImages.logo
         })
         .setTimestamp();
 
     await interaction.reply({
         embeds: [replyEmbed],
-        ephemeral: true // 🔒 only user sees
+        ephemeral: true
     });
 });
 
